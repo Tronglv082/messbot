@@ -1,5 +1,6 @@
 Flask
 requests
 wikipedia
-duckduckgo-search
+duckduckgo_search
 gunicorn
+
