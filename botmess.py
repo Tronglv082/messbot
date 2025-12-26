@@ -12,28 +12,237 @@ from googlesearch import search
 # ================= CẤU HÌNH BOT =================
 app = Flask(__name__)
 
-# Token bạn đã cung cấp
+# Token của bạn
 ACCESS_TOKEN = "EAAJpiB62hRwBQYOZBwZCNSFTIgGlnhMCNtZAfsTuHsnFXIcOcg68xQWXfrF9tJ73L9gRaleeXwMRql4SmPPJzStmSZBzvjdrVGeatHqEi2Gw4JnDoZCqmtg1iXcVMIVykP197nZCHbINBvkaxz0fn8sPmMhPDOJgKMZBGLSnMl6Ak5C6SecqkRtcFiYfrkJgMt2RCeJpDaR3QZDZD"
 VERIFY_TOKEN = "bot 123"
 
 # Cấu hình ngôn ngữ cho Wikipedia
-wikipedia.set_lang("vi")
+try:
+    wikipedia.set_lang("vi")
+except:
+    pass
 
-# Biến toàn cục để lưu trạng thái game Kéo Búa Bao
+# Biến toàn cục lưu trạng thái game
 kbb_state = {} 
 
-# Dữ liệu giả lập cho Game Code và Tarot (Vì không có API chính thức free ổn định)
 GAME_CODES = {
-    "genshin": ["GENSHINGIFT", "CA3BLTURGH9D", "RTJUNRSHTREW"],
-    "hsr": ["STARRAILGIFT", "HSRVER10JRL", "MB6N2TVCSQ9F"],
+    "genshin": ["GENSHINGIFT", "CA3BLTURGH9D"],
+    "hsr": ["STARRAILGIFT", "HSRVER10JRL"],
     "wuwa": ["WUWA2024", "WUTHERINGGIFT"],
-    "wwm": ["WWMVIETNAM", "KIEMHIEP2025"]
+    "wwm": ["WWMVIETNAM"]
 }
 
 TAROT_CARDS = [
-    {"name": "The Fool", "meaning": "Khởi đầu mới, tự do, ngây thơ."},
-    {"name": "The Magician", "meaning": "Sức mạnh ý chí, kỹ năng, sự tập trung."},
-    {"name": "The Lovers", "meaning": "Tình yêu, sự hòa hợp, sự lựa chọn."},
+    {"name": "The Fool", "meaning": "Khởi đầu mới, tự do."},
+    {"name": "The Magician", "meaning": "Sức mạnh ý chí, kỹ năng."},
+    {"name": "The Lovers", "meaning": "Tình yêu, sự lựa chọn."},
+    {"name": "Death", "meaning": "Sự kết thúc, thay đổi lớn."},
+    {"name": "The Sun", "meaning": "Thành công, niềm vui."}
+]
+
+# ================= HÀM HỖ TRỢ =================
+
+def send_message(recipient_id, text):
+    """Gửi tin nhắn văn bản"""
+    params = {"access_token": ACCESS_TOKEN}
+    headers = {"Content-Type": "application/json"}
+    data = json.dumps({
+        "recipient": {"id": recipient_id},
+        "message": {"text": text}
+    })
+    try:
+        requests.post("https://graph.facebook.com/v17.0/me/messages", params=params, headers=headers, data=data)
+    except Exception as e:
+        print(f"Lỗi gửi tin: {e}")
+
+def send_image(recipient_id, image_url):
+    """Gửi ảnh"""
+    params = {"access_token": ACCESS_TOKEN}
+    headers = {"Content-Type": "application/json"}
+    data = json.dumps({
+        "recipient": {"id": recipient_id},
+        "message": {
+            "attachment": {
+                "type": "image",
+                "payload": {"url": image_url, "is_reusable": True}
+            }
+        }
+    })
+    try:
+        requests.post("https://graph.facebook.com/v17.0/me/messages", params=params, headers=headers, data=data)
+    except Exception as e:
+        print(f"Lỗi gửi ảnh: {e}")
+
+def handle_ai_command(user_id, command, args):
+    """Xử lý lệnh"""
+    response_text = ""
+    try:
+        # 1. /help
+        if command == "/help":
+            response_text = (
+                "🤖 MENU:\n/nhac, /time, /thptqg, /wiki, /gg, /code, /updt, /meme, /tarot, /anime, /kbb"
+            )
+
+        # 2. /nhac
+        elif command == "/nhac":
+            if not args:
+                response_text = "🎶 Nhạc ngẫu nhiên: https://www.youtube.com/watch?v=k5mX3NkA7jM"
+            else:
+                q = " ".join(args).replace(' ', '+')
+                response_text = f"🔎 Link: https://www.youtube.com/results?search_query={q}"
+
+        # 3. /time
+        elif command == "/time":
+            tz_vn = pytz.timezone('Asia/Ho_Chi_Minh')
+            now = datetime.datetime.now(tz_vn)
+            response_text = now.strftime("🕒 %H:%M:%S - %d/%m/%Y (GMT+7)")
+
+        # 4. /thptqg
+        elif command == "/thptqg":
+            target = datetime.datetime(2026, 6, 12)
+            now = datetime.datetime.now()
+            diff = target - now
+            response_text = f"⏳ Còn {diff.days} ngày nữa thi THPTQG 2026!"
+
+        # 5. /wiki
+        elif command == "/wiki":
+            try:
+                summary = wikipedia.summary(" ".join(args), sentences=2)
+                response_text = f"📚 Wiki:\n{summary}"
+            except:
+                response_text = "Không tìm thấy hoặc lỗi Wikipedia."
+
+        # 6. /gg
+        elif command == "/gg":
+            try:
+                q = " ".join(args)
+                res = list(search(q, num_results=1, advanced=True))
+                if res:
+                    response_text = f"🔍 GG: {res[0].title}\n{res[0].description}\n{res[0].url}"
+                else:
+                    response_text = "Không có kết quả."
+            except:
+                response_text = "Lỗi tìm kiếm Google."
+
+        # 7. /code
+        elif command == "/code":
+            if args:
+                g = args[0].lower()
+                codes = GAME_CODES.get(g, ["Không có data game này"])
+                response_text = f"🎁 Code {g.upper()}:\n" + "\n".join(codes)
+            else:
+                response_text = "Nhập tên game: /code genshin"
+
+        # 8. /updt
+        elif command == "/updt":
+            response_text = "📢 Kiểm tra trang chủ game để biết update mới nhất."
+
+        # 9. /meme
+        elif command == "/meme":
+            try:
+                r = requests.get("https://meme-api.com/gimme/animememes").json()
+                send_image(user_id, r.get("url"))
+                return
+            except:
+                response_text = "Lỗi lấy ảnh meme."
+
+        # 10. /tarot
+        elif command == "/tarot":
+            card = random.choice(TAROT_CARDS)
+            response_text = f"🔮 {card['name']}: {card['meaning']}"
+
+        # 11. /hld
+        elif command == "/hld":
+            response_text = "🎉 Sắp tới: Tết Nguyên Đán."
+
+        # 12. /anime
+        elif command == "/anime":
+            animes = ["Naruto", "One Piece", "Bleach"]
+            response_text = f"🎬 Anime: {random.choice(animes)}"
+
+        # 13. /kbb
+        elif command == "/kbb":
+            kbb_state[user_id] = "WAITING"
+            response_text = "✊✌️✋ Bot đã úp bài. Bạn chọn: kéo, búa, hay bao?"
+
+        else:
+            response_text = "Lệnh không đúng. Gõ /help."
+
+    except Exception as e:
+        response_text = f"Lỗi: {str(e)}"
+
+    send_message(user_id, response_text)
+
+def handle_kbb_logic(user_id, text):
+    choices = ['kéo', 'búa', 'bao']
+    if text not in choices: return False
+    
+    bot = random.choice(choices)
+    # Logic thắng thua đơn giản
+    if text == bot: res = "Hòa!"
+    elif (text=='kéo' and bot=='bao') or (text=='búa' and bot=='kéo') or (text=='bao' and bot=='búa'):
+        res = "Bạn thắng!"
+    else: res = "Bot thắng!"
+    
+    send_message(user_id, f"📦 Bot ra: {bot.upper()} - {res}")
+    del kbb_state[user_id]
+    return True
+
+# ================= FLASK ROUTES =================
+
+@app.route("/", methods=['GET'])
+def verify_webhook():
+    """Hàm xác thực verify token (GET)"""
+    mode = request.args.get("hub.mode")
+    token = request.args.get("hub.verify_token")
+    challenge = request.args.get("hub.challenge")
+    
+    if mode and token:
+        if mode == "subscribe" and token == VERIFY_TOKEN:
+            return challenge, 200
+        else:
+            return "Forbidden", 403
+    return "Hello World", 200
+
+@app.route("/", methods=['POST'])
+def webhook_message():
+    """Hàm nhận tin nhắn (POST)"""
+    body = request.get_json()
+    
+    if body.get("object") == "page":
+        for entry in body["entry"]:
+            for event in entry["messaging"]:
+                if "message" in event:
+                    sender_id = event["sender"]["id"]
+                    
+                    # Xử lý ảnh
+                    if "attachments" in event["message"]:
+                        for att in event["message"]["attachments"]:
+                            if att["type"] == "image":
+                                send_message(sender_id, "🖼️ Đang tạo sticker...")
+                                send_image(sender_id, att["payload"]["url"])
+                                return "ok", 200
+
+                    # Xử lý text
+                    if "text" in event["message"]:
+                        text = event["message"]["text"].strip().lower()
+                        
+                        # Check game KBB
+                        if sender_id in kbb_state:
+                            if handle_kbb_logic(sender_id, text):
+                                continue
+
+                        if text.startswith("/"):
+                            parts = text.split()
+                            handle_ai_command(sender_id, parts[0], parts[1:])
+                        else:
+                            send_message(sender_id, "Gõ /help để xem lệnh.")
+                            
+        return "EVENT_RECEIVED", 200
+    return "Not Found", 404
+
+if __name__ == "__main__":
+    app.run(port=5000)
     {"name": "Death", "meaning": "Kết thúc để bắt đầu, sự thay đổi lớn."},
     {"name": "The Sun", "meaning": "Thành công, niềm vui, năng lượng tích cực."},
 ]
@@ -484,4 +693,5 @@ def webhook():
 if __name__ == "__main__":
     # Chạy server ở cổng 5000
     app.run(port=5000, debug=True)
+
 
