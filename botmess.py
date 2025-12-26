@@ -3,108 +3,126 @@ from flask import Flask, request
 import requests
 from datetime import datetime
 import google.generativeai as genai
+import wikipedia
+import random
 
 app = Flask(__name__)
 
-# --- CẤU HÌNH (KEYS CỦA BẠN) ---
+# --- CẤU HÌNH ---
+# PAGE_ACCESS_TOKEN: Token của bạn
 PAGE_ACCESS_TOKEN = "EAAJpiB62hRwBQYOZBwZCNSFTIgGlnhMCNtZAfsTuHsnFXIcOcg68xQWXfrF9tJ73L9gRaleeXwMRql4SmPPJzStmSZBzvjdrVGeatHqEi2Gw4JnDoZCqmtg1iXcVMIVykP197nZCHbINBvkaxz0fn8sPmMhPDOJgKMZBGLSnMl6Ak5C6SecqkRtcFiYfrkJgMt2RCeJpDaR3QZDZD"
+# VERIFY_TOKEN: bot 123 (Có dấu cách)
 VERIFY_TOKEN = "bot 123"
-GEMINI_API_KEY = "AIzaSyCG0bMJtdlitBC_AVRyMC2JV8aSp3N9GM8"
+# GEMINI API KEY: Key MỚI của bạn
+GEMINI_API_KEY = "AIzaSyCLu6ZfQocgW3FthZDNKz2Vb0hQ90w8b6A"
 
-# Cấu hình Gemini AI
+# Cấu hình AI (Dùng bản Flash cho nhanh và miễn phí)
 genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-pro')
+model = genai.GenerativeModel('gemini-1.5-flash')
 
-# --- HÀM GỬI TIN NHẮN FACEBOOK ---
+# Cấu hình Wikipedia tiếng Việt
+wikipedia.set_lang("vi")
+
+# --- HÀM GỬI TIN NHẮN ---
 def send_message(recipient_id, text):
     params = {"access_token": PAGE_ACCESS_TOKEN}
     headers = {"Content-Type": "application/json"}
+    
+    # Cắt tin nhắn nếu quá dài (Facebook giới hạn 2000 ký tự)
+    if len(text) > 1900:
+        text = text[:1900] + "... (còn nữa)"
+        
     data = {
         "recipient": {"id": recipient_id},
         "message": {"text": text}
     }
-    r = requests.post("https://graph.facebook.com/v19.0/me/messages", params=params, headers=headers, json=data)
-    if r.status_code != 200:
-        print(f"Lỗi gửi: {r.status_code}, {r.text}")
+    try:
+        r = requests.post("https://graph.facebook.com/v19.0/me/messages", params=params, headers=headers, json=data)
+        if r.status_code != 200:
+            print(f"❌ Lỗi gửi FB: {r.text}")
+    except Exception as e:
+        print(f"❌ Lỗi mạng: {e}")
 
 # --- HÀM HỎI GEMINI ---
-def get_gemini_response(prompt):
+def ask_gemini(prompt):
     try:
+        # Thêm chỉ dẫn để bot trả lời ngắn gọn, vui vẻ hơn
+        system_instruction = "Bạn là một trợ lý ảo vui tính. Hãy trả lời ngắn gọn, súc tích."
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
-        return "Gemini đang bận, vui lòng thử lại sau."
+        print(f"❌ Lỗi Gemini: {e}")
+        return "Server AI đang quá tải, thử lại sau 1 lát nhé!"
 
 # --- XỬ LÝ LỆNH ---
 def process_command(message_text, sender_id):
     msg = message_text.strip()
     msg_lower = msg.lower()
 
-    # 1. /time
-    if msg_lower == "/time":
-        now = datetime.now()
-        return f"🕒 Bây giờ là: {now.strftime('%H:%M:%S')} ngày {now.strftime('%d/%m/%Y')}"
-
-    # 2. Hi
-    elif msg_lower == "hi":
-        return 'Xin chào, mik là bot tự động vui lòng gõ "/help" để được hỗ trợ'
-
-    # 3. /help
-    elif msg_lower == "/help":
+    # 1. Menu Hướng dẫn
+    if msg_lower == "/help" or msg_lower == "menu":
         return (
-            "📌 DANH SÁCH LỆNH:\n"
+            "🤖 MENU BOT 🤖\n"
             "------------------\n"
-            "1. /time: Xem giờ hiện tại\n"
-            "2. /thptqg: Đếm ngược thi THPTQG 2026\n"
-            "3. /gemini [câu hỏi]: Hỏi AI (VD: /gemini Tóm tắt lịch sử)\n"
-            "4. /help: Xem hướng dẫn"
+            "1. /wiki [từ khóa]: Tra cứu Wiki\n"
+            "2. /thptqg: Đếm ngược ngày thi\n"
+            "3. /nhac: Gợi ý nhạc hay\n"
+            "4. Chat tự do: Bot sẽ tự trả lời\n"
         )
 
-    # 4. /thptqg
+    # 2. Đếm ngược thi THPTQG
     elif msg_lower == "/thptqg":
-        target_date = datetime(2026, 6, 12)
-        today = datetime.now()
-        remaining = target_date - today
-        if remaining.days > 0:
-            return f"⏳ Còn {remaining.days} ngày nữa là đến 12/6/2026."
-        else:
-            return "Đã qua ngày thi rồi!"
+        days = (datetime(2026, 6, 12) - datetime.now()).days
+        return f"⏳ Còn {days} ngày nữa là đến 12/6/2026. Cố lên các sĩ tử!"
 
-    # 5. /gemini
-    elif msg_lower.startswith("/gemini"):
-        question = msg[7:].strip()
-        if not question:
-            return "Vui lòng nhập câu hỏi sau lệnh. Ví dụ: /gemini Viết đoạn văn về mùa thu"
-        send_message(sender_id, "🤖 Đang suy nghĩ...") # Phản hồi nhanh để user biết
-        return get_gemini_response(question)
+    # 3. Tra cứu Wikipedia
+    elif msg_lower.startswith("/wiki"):
+        keyword = msg[5:].strip()
+        if not keyword: return "Nhập từ khóa đi bạn ơi. VD: /wiki Hà Nội"
+        try:
+            summary = wikipedia.summary(keyword, sentences=2)
+            return f"📚 Wiki: {summary}"
+        except:
+            return "Không tìm thấy thông tin trên Wiki."
 
-    # Mặc định
+    # 4. Gợi ý nhạc
+    elif msg_lower == "/nhac":
+        songs = ["Em của ngày hôm qua", "Chúng ta của tương lai", "Cắt đôi nỗi sầu", "Nấu ăn cho em", "Thiên Lý Ơi"]
+        return f"🎵 Nghe bài này đi: {random.choice(songs)}"
+
+    # 5. CHAT TỰ ĐỘNG (Dùng AI Key Mới)
     else:
-        return 'Bot không hiểu. Gõ "/help" để xem lệnh.'
+        # Gửi tin nhắn chờ để user đỡ sốt ruột
+        send_message(sender_id, "💬 Đang nhập...") 
+        return ask_gemini(msg)
 
-# --- WEBHOOK (QUAN TRỌNG: Đã thêm /webhook) ---
+# --- WEBHOOK ---
 @app.route("/webhook", methods=['GET', 'POST'])
 def webhook():
-    # 1. Xác minh Verify Token
+    # Xác minh Token (Facebook gọi đến)
     if request.method == 'GET':
         if request.args.get("hub.verify_token") == VERIFY_TOKEN:
             return request.args.get("hub.challenge")
-        return "Sai Verify Token", 403
+        return "Sai Token", 403
 
-    # 2. Nhận tin nhắn
+    # Nhận tin nhắn từ người dùng
     if request.method == 'POST':
-        data = request.get_json()
-        if data.get("object") == "page":
-            for entry in data["entry"]:
-                for event in entry.get("messaging", []):
-                    if event.get("message") and "text" in event["message"]:
-                        sender_id = event["sender"]["id"]
-                        message_text = event["message"]["text"]
-                        
-                        # Xử lý và trả lời
-                        response = process_command(message_text, sender_id)
-                        send_message(sender_id, response)
-        return "OK", 200
+        try:
+            data = request.get_json()
+            if data and data.get("object") == "page":
+                for entry in data["entry"]:
+                    for event in entry.get("messaging", []):
+                        if event.get("message") and "text" in event["message"]:
+                            sender_id = event["sender"]["id"]
+                            text = event["message"]["text"]
+                            
+                            # Xử lý
+                            response = process_command(text, sender_id)
+                            send_message(sender_id, response)
+            return "OK", 200
+        except Exception as e:
+            print(f"Lỗi Webhook: {e}")
+            return "Error", 500
 
 if __name__ == "__main__":
     app.run(port=5000, debug=True)
