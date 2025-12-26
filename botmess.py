@@ -9,14 +9,14 @@ import wikipedia
 from flask import Flask, request
 from googlesearch import search
 
-# ================= CẤU HÌNH BOT =================
+# ================= CẤU HÌNH BOT (ĐÃ THAY TOKEN CỦA BẠN) =================
 app = Flask(__name__)
 
-# 👇👇👇 DÁN TOKEN CỦA BẠN VÀO ĐÂY 👇👇👇
-ACCESS_TOKEN = "DÁN_TOKEN_CỦA_BẠN_VÀO_ĐÂY"
+# Token mới nhất bạn cung cấp
+ACCESS_TOKEN = "EAAJpiB62hRwBQQjVYulX1G6CRANSKLCZBPxF4UhFSZCCebg7uSGCcZAPOti7jjXgUNZCOOfe624MIZBfuCAZCNfaZANLCcKxO3QSomx8mW4xhbOlGzsXwrKDiuO5avRfDnP4DNQdrZB26ni8IZCfqdzjczrbITe2snoFBZBJDUNxxUZC922FvjuIZArIwLN6nqjvwb7HxWNGxIkWawZDZD"
 VERIFY_TOKEN = "bot 123"
 
-# Cấu hình Wiki tiếng Việt
+# Cấu hình ngôn ngữ Wiki
 try:
     wikipedia.set_lang("vi")
 except:
@@ -27,46 +27,40 @@ kbb_state = {}
 
 # ================= DỮ LIỆU & TỪ ĐIỂN =================
 
-# 1. Các câu chém gió đầu câu (để bớt cụt ngủn)
+# Câu dẫn hài hước
 FUNNY_PREFIXES = [
-    "Thưa đại vương, ", "Ối dồi ôi, ", "Theo thông tin mật thì ", 
-    "Bot xin thưa rằng: ", "Đừng bất ngờ nhé, ", "Tin chuẩn 100%: ",
-    "Vâng thưa sếp, ", "Hệ thống ghi nhận là: "
+    "Thưa đại vương, ", "Ối dồi ôi, ", "Tin chuẩn chưa anh? ", 
+    "Bot xin thưa rằng: ", "Đừng bất ngờ nhé, ", "Hệ thống ghi nhận là: ",
+    "Vâng thưa sếp, ", "Alo alo, kết quả là: "
 ]
 
-# 2. Dữ liệu Tarot Full 78 lá (Rút gọn logic để code không quá dài)
+# Dữ liệu Tarot 78 lá (Rút gọn)
 MAJOR_ARCANA = {
-    0: ("The Fool", "Sự khởi đầu mới, ngây thơ, tự do, liều lĩnh."),
-    1: ("The Magician", "Sức mạnh ý chí, kỹ năng, sự tập trung, hành động."),
-    2: ("The High Priestess", "Trực giác, bí ẩn, tiềm thức, sự tĩnh lặng."),
-    3: ("The Empress", "Sự trù phú, thiên nhiên, tình mẫu tử, vẻ đẹp."),
-    4: ("The Emperor", "Quyền lực, cấu trúc, sự ổn định, lãnh đạo."),
-    5: ("The Hierophant", "Truyền thống, niềm tin, tôn giáo, sự tuân thủ."),
-    6: ("The Lovers", "Tình yêu, sự hòa hợp, sự lựa chọn, mối quan hệ."),
-    7: ("The Chariot", "Chiến thắng, ý chí, kiểm soát, di chuyển."),
-    8: ("Strength", "Sức mạnh nội tâm, lòng can đảm, kiên nhẫn."),
-    9: ("The Hermit", "Sự cô đơn, tìm kiếm chân lý, nội tâm."),
-    10: ("Wheel of Fortune", "Vận mệnh, sự thay đổi, chu kỳ, may mắn."),
+    0: ("The Fool", "Khởi đầu mới, tự do, ngây thơ, liều lĩnh."),
+    1: ("The Magician", "Kỹ năng, ý chí, sự tập trung."),
+    2: ("The High Priestess", "Trực giác, bí ẩn, tiềm thức."),
+    3: ("The Empress", "Sự trù phú, thiên nhiên, vẻ đẹp."),
+    4: ("The Emperor", "Quyền lực, cấu trúc, lãnh đạo."),
+    5: ("The Hierophant", "Truyền thống, niềm tin, tôn giáo."),
+    6: ("The Lovers", "Tình yêu, sự hòa hợp, lựa chọn."),
+    7: ("The Chariot", "Chiến thắng, kiểm soát, di chuyển."),
+    8: ("Strength", "Sức mạnh nội tâm, lòng can đảm."),
+    9: ("The Hermit", "Sự cô đơn, tìm kiếm chân lý."),
+    10: ("Wheel of Fortune", "Vận mệnh, thay đổi, may mắn."),
     11: ("Justice", "Công lý, sự thật, luật nhân quả."),
-    12: ("The Hanged Man", "Sự hy sinh, góc nhìn mới, chờ đợi."),
-    13: ("Death", "Sự kết thúc, buông bỏ, chuyển hóa (không hẳn là chết)."),
-    14: ("Temperance", "Sự cân bằng, kiên nhẫn, điều độ."),
-    15: ("The Devil", "Sự cám dỗ, ràng buộc, vật chất, nghiện ngập."),
-    16: ("The Tower", "Sự sụp đổ bất ngờ, tai họa, sự thức tỉnh."),
-    17: ("The Star", "Hy vọng, niềm tin, sự chữa lành, cảm hứng."),
-    18: ("The Moon", "Ảo tưởng, nỗi sợ hãi, tiềm thức, giấc mơ."),
-    19: ("The Sun", "Thành công, niềm vui, sự rõ ràng, năng lượng tích cực."),
-    20: ("Judgement", "Sự phán xét, tái sinh, tiếng gọi nội tâm."),
-    21: ("The World", "Sự hoàn thành, trọn vẹn, kết thúc một hành trình.")
+    12: ("The Hanged Man", "Hy sinh, góc nhìn mới, chờ đợi."),
+    13: ("Death", "Kết thúc, thay đổi lớn (không hẳn là chết)."),
+    14: ("Temperance", "Cân bằng, kiên nhẫn, điều độ."),
+    15: ("The Devil", "Cám dỗ, ràng buộc, vật chất."),
+    16: ("The Tower", "Sụp đổ bất ngờ, tai họa, thức tỉnh."),
+    17: ("The Star", "Hy vọng, niềm tin, chữa lành."),
+    18: ("The Moon", "Ảo tưởng, nỗi sợ, tiềm thức."),
+    19: ("The Sun", "Thành công, niềm vui, năng lượng tích cực."),
+    20: ("Judgement", "Phán xét, tái sinh, tiếng gọi."),
+    21: ("The World", "Hoàn thành, trọn vẹn, kết thúc hành trình.")
 }
 SUITS = {"Wands": "Lửa - Hành động", "Cups": "Nước - Cảm xúc", "Swords": "Khí - Trí tuệ", "Pentacles": "Đất - Vật chất"}
-RANKS = {
-    "Ace": "Khởi đầu mới", "Two": "Sự cân bằng/lựa chọn", "Three": "Sự phát triển/hợp tác",
-    "Four": "Sự ổn định/nghỉ ngơi", "Five": "Mất mát/xung đột", "Six": "Hồi tưởng/chia sẻ",
-    "Seven": "Đánh giá/ảo tưởng", "Eight": "Sức mạnh/bế tắc", "Nine": "Độc lập/lo lắng",
-    "Ten": "Trọn vẹn/gánh nặng", "Page": "Thông điệp mới", "Knight": "Hành động nhanh",
-    "Queen": "Sự nuôi dưỡng", "King": "Sự kiểm soát"
-}
+RANKS = ["Ace", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Page", "Knight", "Queen", "King"]
 
 # ================= HÀM GỬI TIN =================
 
@@ -113,30 +107,29 @@ def send_quick_reply(user_id, text, options):
 # ================= LOGIC XỬ LÝ =================
 
 def get_tarot_card():
-    """Rút 1 lá bài chuẩn Tarot 78 lá"""
-    # 30% ra ẩn chính, 70% ra ẩn phụ
-    if random.random() < 0.3:
+    """Rút 1 lá bài chuẩn"""
+    if random.random() < 0.3: # 30% ra Ẩn Chính
         idx = random.choice(list(MAJOR_ARCANA.keys()))
         name, mean = MAJOR_ARCANA[idx]
         return f"🃏 ẨN CHÍNH: {name}\n✨ Ý nghĩa: {mean}"
-    else:
+    else: # 70% ra Ẩn Phụ
         suit_en, suit_mean = random.choice(list(SUITS.items()))
-        rank_en, rank_mean = random.choice(list(RANKS.items()))
-        return f"🎴 ẨN PHỤ: {rank_en} of {suit_en}\n🌊 Nguyên tố: {suit_mean}\n🔑 Từ khóa: {rank_mean}"
+        rank = random.choice(RANKS)
+        return f"🎴 ẨN PHỤ: {rank} of {suit_en}\n🌊 Nguyên tố: {suit_mean}\n🔑 Lá bài của sự: {rank} (theo số học)"
 
 def chat_ai_simulation(text):
-    """Giả lập AI Chatbot khi không dùng lệnh"""
+    """Chat tự động khi không dùng lệnh"""
     text = text.lower()
     if "buồn" in text or "khóc" in text:
         return "Thôi đừng buồn nữa, làm ván /kbb với mình cho đời vui lên nào! 🥺"
     elif "chán" in text:
-        return "Chán thì gõ /nhac để nghe nhạc, hoặc /meme xem ảnh chế đi fen!"
+        return "Chán thì gõ /nhac nghe nhạc chill, hoặc /meme xem ảnh chế đi!"
     elif "yêu" in text or "thích" in text:
         return "Yêu đương gì tầm này, lo học hành đi. Gõ /thptqg xem còn bao nhiêu ngày kìa!"
     elif "ngu" in text or "dốt" in text:
-        return "Ăn nói xà lơ! Tôi thông minh nhất hệ mặt trời đấy nhé. Thử /wiki xem."
+        return "Ăn nói xà lơ! Tôi thông minh nhất cái server này đấy. Thử /wiki xem."
     elif "alo" in text or "ê" in text:
-        return "Nghe nè! Cần giúp gì thì gõ /help nha đại ca."
+        return "Nghe nè! Cần giúp gì thì gõ Menu hoặc /help nha đại ca."
     elif "ngủ" in text:
         return "Chúc ngủ ngon nhé, mơ đẹp đừng mơ thấy bug!"
     else:
@@ -144,16 +137,16 @@ def chat_ai_simulation(text):
             "Câu này khó quá, tôi chịu. Bạn thử gõ lệnh khác xem?",
             "Tôi đang lắng nghe đây...",
             "Thật thú vị! Kể tiếp đi.",
-            "Bạn nói gì tôi chưa hiểu lắm, nhưng nghe có vẻ uy tín đấy.",
+            "Bạn nói gì tôi chưa hiểu lắm, nhưng nghe có vẻ uy tín.",
             "Gõ /help để xem tôi làm được gì nhé, chứ chém gió tôi hơi kém."
         ])
 
 def handle_command(user_id, command, args):
-    send_typing(user_id) # Hiệu ứng đang gõ...
-    prefix = random.choice(FUNNY_PREFIXES) # Thêm câu dẫn hài hước
+    send_typing(user_id)
+    prefix = random.choice(FUNNY_PREFIXES) # Thêm mắm muối
 
     try:
-        # 1. MENU (Dọc & Bảnh)
+        # 1. MENU
         if command in ["/help", "menu", "hi", "help"]:
             menu = (
                 "╔══════════════╗\n"
@@ -176,25 +169,23 @@ def handle_command(user_id, command, args):
             send_text(user_id, menu)
             return
 
-        # 2. GOOGLE (Đã sửa lỗi)
+        # 2. GOOGLE
         elif command == "/gg":
             if not args:
                 send_text(user_id, prefix + "Bạn phải nhập câu hỏi chứ? Ví dụ: /gg giá vàng hôm nay")
             else:
                 try:
                     q = " ".join(args)
-                    # Lấy kết quả đầu tiên an toàn hơn
                     res_iter = search(q, num_results=1, advanced=True)
-                    res = next(res_iter, None) # Lấy item đầu tiên
-                    
+                    res = next(res_iter, None)
                     if res:
                         send_text(user_id, f"{prefix}Tìm thấy cái này trên Google:\n\n🌐 {res.title}\n👉 {res.url}\n\n📖 {res.description}")
                     else:
                         send_text(user_id, "Tìm đỏ mắt không thấy kết quả nào sếp ơi!")
-                except Exception as e:
-                    send_text(user_id, f"Google đang chặn bot rồi: {e}")
+                except:
+                    send_text(user_id, "Google đang bận đi ngủ rồi, thử lại sau nhé.")
 
-        # 3. TAROT (Nâng cấp 78 lá)
+        # 3. TAROT
         elif command == "/tarot":
             card_info = get_tarot_card()
             send_text(user_id, f"🔮 {prefix}Vũ trụ gửi tín hiệu:\n\n{card_info}")
@@ -210,7 +201,7 @@ def handle_command(user_id, command, args):
         # 5. THỜI GIAN
         elif command == "/time":
             now = datetime.datetime.now(pytz.timezone('Asia/Ho_Chi_Minh'))
-            send_text(user_id, f"{prefix}Bây giờ là: {now.strftime('%H:%M:%S')} (Ngày {now.strftime('%d/%m/%Y')})\nChưa ngủ à?")
+            send_text(user_id, f"{prefix}Bây giờ là: {now.strftime('%H:%M:%S')} (Ngày {now.strftime('%d/%m/%Y')})")
 
         # 6. NHẠC
         elif command == "/nhac":
@@ -245,7 +236,7 @@ def handle_command(user_id, command, args):
             if "genshin" in g: res = "Genshin Impact:\n🎁 GENSHINGIFT\n🎁 CA3BLTURGH9D"
             elif "hsr" in g: res = "Honkai Star Rail:\n🎁 STARRAILGIFT\n🎁 HSRVER10JRL"
             elif "wuwa" in g: res = "Wuthering Waves:\n🎁 WUTHERINGGIFT"
-            else: res = "Game này chưa có code, hoặc bạn nhập sai tên rồi (genshin, hsr, wuwa)."
+            else: res = "Game này chưa có code, hoặc nhập sai tên rồi (genshin, hsr, wuwa)."
             send_text(user_id, f"🎁 {prefix}{res}")
         
         # 10. ANIME
@@ -258,9 +249,8 @@ def handle_command(user_id, command, args):
             days = (datetime.datetime(2026, 6, 12) - datetime.datetime.now()).days
             send_text(user_id, f"⏳ {prefix}Chỉ còn {days} ngày nữa là thi THPTQG 2026. Học đi đừng lười!")
 
-        # LỆNH KHÔNG TỒN TẠI -> CHAT TỰ ĐỘNG
+        # LỆNH LẠ
         else:
-            # Nếu người dùng gõ lệnh sai (bắt đầu bằng /)
             send_text(user_id, "Lệnh này lạ quá, tôi chưa học. Gõ /help để xem menu nhé.")
 
     except Exception as e:
@@ -270,6 +260,7 @@ def handle_command(user_id, command, args):
 
 @app.route("/", methods=['GET'])
 def verify_webhook():
+    # Xác thực với Verify Token: bot 123
     if request.args.get("hub.verify_token") == VERIFY_TOKEN:
         return request.args.get("hub.challenge")
     return "Sai Token", 403
@@ -302,14 +293,12 @@ def webhook_handler():
                 if "message" in event and "text" in event["message"]:
                     text = event["message"]["text"].strip()
                     
-                    # Nếu là lệnh (bắt đầu bằng /) hoặc menu
                     if text.startswith("/") or text.lower() in ["menu", "help", "hi", "chào"]:
                         parts = text.split()
                         cmd = parts[0].lower()
                         args = parts[1:]
                         handle_command(sender_id, cmd, args)
                     else:
-                        # Chat tự động (Không phải lệnh)
                         send_typing(sender_id)
                         reply = chat_ai_simulation(text)
                         send_text(sender_id, reply)
@@ -319,3 +308,4 @@ def webhook_handler():
 
 if __name__ == "__main__":
     app.run(port=5000)
+
