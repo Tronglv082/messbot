@@ -1,7 +1,5 @@
 Flask
 requests
 wikipedia
-googlesearch-python
-beautifulsoup4
-pytz
+duckduckgo-search
 gunicorn
