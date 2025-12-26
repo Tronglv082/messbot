@@ -1,7 +1,9 @@
-flask
-requests
-google-generativeai
-wikipedia
-youtube_search
-gunicorn
+Flask==3.0.0
+requests==2.31.0
+wikipedia==1.4.0
+googlesearch-python==1.2.3
+pytz==2023.3.post1
+gunicorn==21.2.0
+
+
 
