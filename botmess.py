@@ -7,6 +7,7 @@ import pytz
 import requests
 import wikipedia
 from flask import Flask, request
+from googlesearch import search
 
 # ================= 1. CẤU HÌNH BOT =================
 app = Flask(__name__)
@@ -15,7 +16,7 @@ app = Flask(__name__)
 ACCESS_TOKEN = "EAAJpiB62hRwBQQjVYulX1G6CRANSKLCZBPxF4UhFSZCCebg7uSGCcZAPOti7jjXgUNZCOOfe624MIZBfuCAZCNfaZANLCcKxO3QSomx8mW4xhbOlGzsXwrKDiuO5avRfDnP4DNQdrZB26ni8IZCfqdzjczrbITe2snoFBZBJDUNxxUZC922FvjuIZArIwLN6nqjvwb7HxWNGxIkWawZDZD"
 VERIFY_TOKEN = "bot 123"
 
-# Cấu hình Wiki tiếng Việt
+# Cấu hình ngôn ngữ Wiki
 try:
     wikipedia.set_lang("vi")
 except:
@@ -23,37 +24,41 @@ except:
 
 # ================= 2. CƠ SỞ DỮ LIỆU & CẤU HÌNH =================
 
-# --- MAPPING SỐ THỨ TỰ SANG LỆNH ---
+# --- A. MAPPING SỐ THỨ TỰ (1-15) ---
 NUMBER_MAP = {
     "1": "/tarot",
     "2": "/nhac",
     "3": "/time",
     "4": "/thptqg",
-    "5": "/wiki",
-    "6": "/gg",
-    "7": "/code",
+    "5": "/hld",
+    "6": "/wiki",
+    "7": "/gg",
     "8": "/kbb",
     "9": "/meme",
     "10": "/anime",
-    "11": "/hld",
-    "12": "/sticker"
+    "11": "/code",
+    "12": "/updt",
+    "13": "/leak",
+    "14": "/banner",
+    "15": "/sticker"
 }
 
-# --- BIẾN LƯU TRẠNG THÁI (SESSION) ---
+# --- B. BIẾN TRẠNG THÁI (SESSION) ---
 kbb_state = {} 
 tarot_sessions = {} 
 
-# --- DỮ LIỆU GAME CODE ---
+# --- C. DỮ LIỆU GAME CODE ---
 GAME_CODES = {
     "genshin": ["GENSHINGIFT", "CA3BLTURGH9D", "RTJUNRSHTREW", "FATUI"],
     "hsr": ["STARRAILGIFT", "HSRVER10JRL", "MB6N2TVCSQ9F", "POMPOM"],
     "wuwa": ["WUWA2024", "WUTHERINGGIFT", "ROVER123"],
     "wwm": ["WWMVIETNAM", "KIEMHIEP2025"],
     "lq": ["LIENQUAN2025", "GIFTCODELQ", "HPNY2025"],
-    "playtogether": ["PT2025", "KAIAISLAND"]
+    "playtogether": ["PT2025", "KAIAISLAND"],
+    "bloxfruit": ["SUB2GAMERROBOT", "KITGAMING", "ENYU_IS_PRO"]
 }
 
-# --- DỮ LIỆU TAROT 78 LÁ (ĐÃ FIX LỖI SYNTAX) ---
+# --- D. DỮ LIỆU TAROT 78 LÁ ---
 MAJORS = {
     0: ("The Fool", "Khởi đầu mới, tự do", "Liều lĩnh, khờ khại"),
     1: ("The Magician", "Kỹ năng, ý chí", "Thao túng, lừa dối"),
@@ -84,7 +89,6 @@ SUITS = {
     "Swords": ("Kiếm", "Khí - Trí tuệ"),
     "Pentacles": ("Tiền", "Đất - Tiền bạc")
 }
-# Đã sửa cú pháp List chuẩn
 RANKS = [
     ("Ace", "Cơ hội mới", "Bỏ lỡ"),
     ("Two", "Cân bằng", "Mất cân bằng"),
@@ -104,13 +108,13 @@ RANKS = [
 
 SPREADS = {
     "1": {"name": "1 Lá (Thông điệp ngày)", "count": 1, "pos": ["Lời khuyên chính"]},
-    "3": {"name": "3 Lá (QK - HT - TL)", "count": 3, "pos": ["Quá khứ / Nguyên nhân", "Hiện tại / Tình huống", "Tương lai / Kết quả"]},
-    "5": {"name": "5 Lá (Giải quyết vấn đề)", "count": 5, "pos": ["Vấn đề hiện tại", "Thách thức", "Gốc rễ", "Lời khuyên", "Kết quả"]},
-    "10": {"name": "Celtic Cross (Chi tiết)", "count": 10, "pos": ["Hiện tại", "Cản trở", "Tiềm thức", "Quá khứ", "Ý thức", "Tương lai", "Bản thân", "Môi trường", "Hy vọng", "Kết quả"]},
-    "12": {"name": "Zodiac (Tổng quan năm)", "count": 12, "pos": [f"Tháng {i+1}" for i in range(12)]}
+    "3": {"name": "3 Lá (QK - HT - TL)", "count": 3, "pos": ["Quá khứ", "Hiện tại", "Tương lai"]},
+    "5": {"name": "5 Lá (Chi tiết)", "count": 5, "pos": ["Hiện tại", "Thách thức", "Gốc rễ", "Lời khuyên", "Kết quả"]},
+    "10": {"name": "Celtic Cross", "count": 10, "pos": ["Hiện tại", "Cản trở", "Tiềm thức", "Quá khứ", "Ý thức", "Tương lai", "Bản thân", "Môi trường", "Hy vọng", "Kết quả"]},
+    "12": {"name": "Zodiac", "count": 12, "pos": [f"Tháng {i+1}" for i in range(12)]}
 }
 
-# ================= 3. HÀM GỬI TIN (API) =================
+# ================= 3. HÀM HỖ TRỢ (API) =================
 
 def send_typing(user_id):
     try:
@@ -141,119 +145,66 @@ def send_quick_reply(user_id, text, options):
                       data=json.dumps({"recipient": {"id": user_id}, "messaging_type": "RESPONSE", "message": {"text": text, "quick_replies": q_replies}}))
     except: pass
 
-# ================= 4. LOGIC TAROT =================
+# ================= 4. LOGIC TÌM KIẾM THÔNG MINH (SMART SEARCH) =================
+
+def smart_search_summary(query, prefix="🔎"):
+    """Tìm kiếm Google và trả về Tóm tắt (Tiêu đề + Mô tả) thay vì chỉ link"""
+    try:
+        # Tìm 1 kết quả tốt nhất
+        results = list(search(query, num_results=1, advanced=True))
+        if results:
+            item = results[0]
+            msg = f"{prefix} **KẾT QUẢ TÌM KIẾM:**\n\n"
+            msg += f"📌 **{item.title}**\n"
+            msg += f"📝 {item.description}\n"
+            msg += f"🔗 Chi tiết: {item.url}"
+            return msg
+        else:
+            return f"{prefix} Không tìm thấy thông tin nào mới nhất."
+    except Exception as e:
+        # Fallback nếu Google chặn IP
+        return f"{prefix} Do chính sách bảo mật, mời bạn xem trực tiếp tại đây:\n👉 https://www.google.com/search?q={query.replace(' ', '+')}"
+
+# ================= 5. LOGIC TAROT ENGINE =================
 
 def generate_deck():
-    """Tạo bộ bài 78 lá"""
     deck = []
-    # Major
     for i, (name, up, rev) in MAJORS.items():
         deck.append({"name": f"{name}", "type": "Major", "up": up, "rev": rev})
-    # Minor
     for s_name, (s_vn, s_desc) in SUITS.items():
         for r_name, r_up, r_rev in RANKS:
-            deck.append({
-                "name": f"{r_name} of {s_name}", 
-                "type": "Minor", 
-                "up": f"{r_up} trong khía cạnh {s_desc}", 
-                "rev": f"{r_rev} hoặc tắc nghẽn về {s_vn}"
-            })
+            deck.append({"name": f"{r_name} of {s_name}", "type": "Minor", "up": f"{r_up} ({s_desc})", "rev": f"{r_rev} ({s_vn})"})
     return deck
 
 def execute_tarot_reading(spread_id, topic="Chung", question=""):
     try:
         deck = generate_deck()
         random.shuffle(deck)
-        
         spread = SPREADS.get(spread_id, SPREADS["3"])
         count = spread["count"]
-        
         drawn = []
-        major_count = 0
+        major_c = 0
         for i in range(count):
             if not deck: break
-            card = deck.pop()
-            is_rev = random.choice([False, False, False, True]) # 25% ngược
-            
-            if card["type"] == "Major": major_count += 1
-            
+            c = deck.pop()
+            is_rev = random.choice([False, False, False, True])
+            if c["type"] == "Major": major_c += 1
             drawn.append({
                 "pos": spread["pos"][i],
-                "name": card["name"],
+                "name": c["name"],
                 "status": "🔻 NGƯỢC" if is_rev else "🔺 XUÔI",
-                "meaning": card["rev"] if is_rev else card["up"]
+                "meaning": c["rev"] if is_rev else c["up"]
             })
         
-        msg = f"🔮 **KẾT QUẢ TAROT** 🔮\n"
-        msg += f"❤️ Chủ đề: {topic}\n"
-        if question: msg += f"❓ Câu hỏi: {question}\n"
-        msg += f"📜 Trải bài: {spread['name']}\n"
-        msg += "➖➖➖➖➖➖➖➖\n\n"
-        
+        msg = f"🔮 **KẾT QUẢ TAROT: {topic}**\n📜 Spread: {spread['name']}\n➖➖➖➖➖➖\n\n"
         for item in drawn:
-            msg += f"📍 **{item['pos']}**:\n"
-            msg += f"   🃏 {item['name']} ({item['status']})\n"
-            msg += f"   👉 *{item['meaning']}*\n\n"
-            
-        msg += "➖➖➖➖➖➖➖➖\n"
-        msg += "💡 **LỜI KHUYÊN:**\n"
-        if major_count >= count/2:
-            msg += "⚠️ Nhiều lá Ẩn Chính: Giai đoạn ĐỊNH MỆNH quan trọng, cân nhắc kỹ.\n"
-        else:
-            msg += "✅ Nhiều lá Ẩn Phụ: Vấn đề đời thường, có thể thay đổi bằng hành động.\n"
-            
+            msg += f"📍 **{item['pos']}**: {item['name']} ({item['status']})\n👉 {item['meaning']}\n\n"
+        
+        msg += "💡 **TỔNG KẾT:** " + ("Định mệnh lớn (Major dominant)." if major_c >= count/2 else "Vấn đề đời thường (Minor dominant).")
         return msg
-    except Exception as e:
-        return f"⚠️ Có lỗi khi trải bài: {str(e)}"
+    except Exception as e: return f"Lỗi Tarot: {str(e)}"
 
-# ================= 5. QUY TRÌNH HỘI THOẠI =================
-
-def handle_tarot_flow(user_id, text, payload):
-    session = tarot_sessions.get(user_id, {"step": 0})
-    
-    # CASE: Khôi phục session nếu bị mất
-    if payload and "SPREAD_" in payload:
-        spread_id = payload.replace("SPREAD_", "")
-        send_typing(user_id)
-        send_text(user_id, f"🔀 Đang xào bài cho trải bài {SPREADS.get(spread_id, {}).get('name', 'Nhanh')}...")
-        result = execute_tarot_reading(spread_id, topic="Khôi phục", question="Tự nhẩm")
-        send_text(user_id, result)
-        if user_id in tarot_sessions: del tarot_sessions[user_id]
-        return
-
-    # STEP 1: Chọn Topic -> Hỏi câu hỏi
-    if session["step"] == 1:
-        session["topic"] = payload if payload else text
-        session["step"] = 2
-        tarot_sessions[user_id] = session
-        send_text(user_id, f"Bạn muốn hỏi cụ thể gì về '{session['topic']}'? (Hoặc gõ '.' để bỏ qua)")
-        return
-
-    # STEP 2: Nhập câu hỏi -> Hỏi thông tin
-    if session["step"] == 2:
-        session["question"] = text
-        session["step"] = 3
-        tarot_sessions[user_id] = session
-        options = [("Bỏ qua", "SKIP_INFO")]
-        send_quick_reply(user_id, "Cho mình biết Cung Hoàng Đạo/Ngày sinh nhé? (Bấm Bỏ qua nếu ngại)", options)
-        return
-
-    # STEP 3: Nhập Info -> Chọn Spread
-    if session["step"] == 3:
-        session["info"] = text
-        session["step"] = 4
-        tarot_sessions[user_id] = session
-        options = [
-            ("1 Lá (Nhanh)", "SPREAD_1"),
-            ("3 Lá (Cơ bản)", "SPREAD_3"),
-            ("5 Lá (Chi tiết)", "SPREAD_5"),
-            ("Celtic (10 lá)", "SPREAD_10"),
-            ("Zodiac (12 lá)", "SPREAD_12")
-        ]
-        send_quick_reply(user_id, "🔹 CHỌN CÁCH TRẢI BÀI:", options)
-        return
-
-# ================= 6. XỬ LÝ LỆNH (COMMANDS) =================
+# ================= 6. XỬ LÝ LỆNH (COMMAND HANDLER) =================
 
 def handle_command(user_id, cmd, args):
     cmd = cmd.lower()
@@ -261,99 +212,177 @@ def handle_command(user_id, cmd, args):
     # 1. TAROT
     if cmd == "/tarot":
         tarot_sessions[user_id] = {"step": 1}
-        options = [("Tình yêu", "Tình yêu"), ("Công việc", "Công việc"), ("Tài chính", "Tài chính"), ("Nội tâm", "Nội tâm")]
+        options = [("Tình yêu", "Tình yêu"), ("Công việc", "Công việc"), ("Tài chính", "Tài chính")]
         send_quick_reply(user_id, "🔮 **PHÒNG TAROT ONLINE**\nBạn muốn hỏi về chủ đề gì?", options)
     
-    # 2. MENU / HELP (ĐÚNG FORMAT YÊU CẦU)
-    elif cmd in ["/help", "menu", "hi", "help"]:
-        menu = (
-            "🤖 **DANH SÁCH LỆNH BOT**\n"
-            "➖➖➖➖➖➖➖➖\n"
-            "🔮 1./tarot: Bói bài Tarot\n"
-            "🎵 2./nhac [tên] : Tìm nhạc Youtube\n"
-            "🕒 3./time : Xem giờ hiện tại\n"
-            "⏳ 4./thptqg : Đếm ngược ngày thi\n"
-            "📚 5./wiki [từ] : Tra Wikipedia\n"
-            "🔎 6./gg [câu hỏi] : Link Google\n"
-            "🎁 7./code [game] : Giftcode game\n"
-            "✊ 8./kbb : Chơi Kéo Búa Bao\n"
-            "🤣 9./meme : Xem ảnh chế\n"
-            "🎬 10./anime : Gợi ý Anime\n"
-            "📅 11./hld : Ngày lễ sắp tới\n"
-            "🖼️ 12./sticker : Gửi ảnh để tạo sticker\n\n"
-            "*(Bạn có thể gõ số thứ tự để dùng lệnh nhanh)*"
-        )
-        send_text(user_id, menu)
+    # 2. NHẠC
+    elif cmd == "/nhac":
+        q = " ".join(args) if args else ""
+        link = f"https://www.youtube.com/results?search_query={q.replace(' ', '+')}" if q else "https://www.youtube.com/watch?v=k5mX3NkA7jM"
+        send_text(user_id, f"🎧 **KẾT QUẢ TÌM NHẠC:**\n👉 {link}")
 
-    # 3. GOOGLE
-    elif cmd == "/gg":
-        if not args: send_text(user_id, "Nhập câu hỏi đi. Ví dụ: /gg Cách nấu phở")
-        else:
-            q = " ".join(args).replace(" ", "+")
-            send_text(user_id, f"🔎 Kết quả tìm kiếm:\n👉 https://www.google.com/search?q={q}")
+    # 3. TIME
+    elif cmd == "/time":
+        now = datetime.datetime.now(pytz.timezone('Asia/Ho_Chi_Minh'))
+        send_text(user_id, f"⏰ **GIỜ HIỆN TẠI:**\n{now.strftime('%H:%M:%S')} - Ngày {now.strftime('%d/%m/%Y')}")
 
-    # 4. WIKI
+    # 4. THPTQG
+    elif cmd == "/thptqg":
+        days = (datetime.datetime(2026, 6, 25) - datetime.datetime.now()).days
+        send_text(user_id, f"⏳ **ĐẾM NGƯỢC THPTQG 2026:**\nCòn {days} ngày nữa! Học đi đừng lười! 📚")
+
+    # 5. NGÀY LỄ (/hld)
+    elif cmd == "/hld":
+        send_text(user_id, "🎉 **SỰ KIỆN SẮP TỚI:**\n- Tết Nguyên Đán (29/01/2025)\n- Valentine (14/02)\nChuẩn bị tiền đi chơi nhé! 💸")
+
+    # 6. WIKI
     elif cmd == "/wiki":
-        if not args: send_text(user_id, "Tra gì nói đi? Ví dụ: /wiki Bác Hồ")
+        if not args: send_text(user_id, "📖 Nhập từ khóa cần tra. Ví dụ: /wiki Hà Nội")
         else:
             try:
                 summary = wikipedia.summary(" ".join(args), sentences=3)
-                send_text(user_id, f"📚 Wikipedia:\n{summary}")
-            except: send_text(user_id, "Không tìm thấy thông tin.")
+                send_text(user_id, f"📚 **WIKIPEDIA:**\n{summary}")
+            except: send_text(user_id, "❌ Không tìm thấy trên Wiki.")
 
-    # 5. NHẠC
-    elif cmd == "/nhac":
-        if not args: send_text(user_id, "🎵 Nhạc ngẫu nhiên: https://www.youtube.com/watch?v=k5mX3NkA7jM")
+    # 7. GOOGLE
+    elif cmd == "/gg":
+        if not args: send_text(user_id, "🌐 Nhập câu hỏi đi. Ví dụ: /gg Giá vàng hôm nay")
         else:
-            q = "+".join(args)
-            send_text(user_id, f"🎵 Link nhạc: https://www.youtube.com/results?search_query={q}")
+            res = smart_search_summary(" ".join(args), prefix="🌐")
+            send_text(user_id, res)
 
-    # 6. THPTQG
-    elif cmd == "/thptqg":
-        days = (datetime.datetime(2026, 6, 12) - datetime.datetime.now()).days
-        send_text(user_id, f"⏳ Còn {days} ngày nữa là thi THPTQG 2026. Cố lên!")
-
-    # 7. TIME
-    elif cmd == "/time":
-        now = datetime.datetime.now(pytz.timezone('Asia/Ho_Chi_Minh'))
-        send_text(user_id, f"🕒 {now.strftime('%H:%M:%S')} - Ngày {now.strftime('%d/%m/%Y')}")
-
-    # 8. KBB
+    # 8. KÉO BÚA BAO
     elif cmd == "/kbb":
         kbb_state[user_id] = "WAITING"
-        send_quick_reply(user_id, "✊✌️✋ Bot đã úp bài. Mời ra chiêu:", [("✌️", "KEO"), ("✊", "BUA"), ("✋", "BAO")])
+        send_quick_reply(user_id, "✊ **KÉO BÚA BAO**\nBot đã chọn xong. Mời bạn ra tay:", [("✌️", "KEO"), ("✊", "BUA"), ("✋", "BAO")])
 
-    # 9. CODE GAME
-    elif cmd == "/code":
-        g = args[0].lower() if args else ""
-        codes = GAME_CODES.get(g, ["Chưa có code game này. Thử: genshin, hsr, wuwa, lq."])
-        send_text(user_id, f"🎁 Code {g.upper()}:\n" + "\n".join(codes))
-
-    # 10. ANIME
-    elif cmd == "/anime":
-        animes = ["Naruto", "One Piece", "Attack on Titan", "Frieren", "Doraemon", "Bleach"]
-        send_text(user_id, f"🎬 Xem bộ này đi: {random.choice(animes)}")
-
-    # 11. MEME
+    # 9. MEME
     elif cmd == "/meme":
         try:
             r = requests.get("https://meme-api.com/gimme/animememes").json()
             send_image(user_id, r.get("url"))
-        except: send_text(user_id, "Lỗi meme.")
+        except: send_text(user_id, "❌ Lỗi ảnh meme.")
 
-    # 12. NGÀY LỄ
-    elif cmd == "/hld":
-        send_text(user_id, "🎉 Sắp tới: Tết Nguyên Đán (29/01/2025).")
-    
-    # 13. STICKER
+    # 10. ANIME
+    elif cmd == "/anime":
+        animes = ["Naruto", "One Piece", "Attack on Titan", "Frieren", "Doraemon", "Bleach", "Jujutsu Kaisen"]
+        send_text(user_id, f"🎬 **GỢI Ý ANIME:**\nXem bộ này đi hay lắm: **{random.choice(animes)}**")
+
+    # 11. GIFTCODE
+    elif cmd == "/code":
+        g = args[0].lower() if args else ""
+        codes = GAME_CODES.get(g, ["⚠️ Chưa có code game này. (Thử: genshin, hsr, wuwa, lq, bloxfruit)"])
+        send_text(user_id, f"🎟️ **GIFTCODE {g.upper()}:**\n" + "\n".join(codes))
+
+    # 12. UPDATE GAME (/updt)
+    elif cmd == "/updt":
+        if not args: send_text(user_id, "🆕 Nhập tên game (và phiên bản). Ví dụ: `/updt genshin 5.3`")
+        else:
+            q = " ".join(args)
+            query = f"latest update notes {q}"
+            res = smart_search_summary(query, prefix="🆕")
+            send_text(user_id, f"🔍 Đang tìm thông tin cập nhật cho **{q.upper()}**...\n\n{res}")
+
+    # 13. LEAK GAME (/leak)
+    elif cmd == "/leak":
+        if not args: send_text(user_id, "🕵️ Nhập tên game cần hóng leak. Ví dụ: `/leak hsr`")
+        else:
+            q = " ".join(args)
+            query = f"latest leaks {q} reddit twitter"
+            res = smart_search_summary(query, prefix="🕵️")
+            send_text(user_id, f"🕵️ Đang quét các diễn đàn Leak cho **{q.upper()}**...\n\n{res}")
+
+    # 14. BANNER (/banner)
+    elif cmd == "/banner":
+        if not args: send_text(user_id, "🏷️ Nhập tên game. Ví dụ: `/banner genshin`")
+        else:
+            q = " ".join(args)
+            query = f"current limited banner {q} {datetime.datetime.now().strftime('%B %Y')}"
+            res = smart_search_summary(query, prefix="🏷️")
+            # Tìm link ảnh banner
+            img_search_link = f"https://www.google.com/search?tbm=isch&q={query.replace(' ', '+')}"
+            
+            msg = f"🏷️ **BANNER HIỆN TẠI: {q.upper()}**\n\n{res}\n\n🖼️ **Xem ảnh banner tại đây:**\n👉 {img_search_link}"
+            send_text(user_id, msg)
+
+    # 15. STICKER
     elif cmd == "/sticker":
-        send_text(user_id, "Gửi ảnh kèm lệnh /sticker để mình biến nó thành nhãn dán.")
+        send_text(user_id, "🖼️ Hãy gửi kèm một bức ảnh cùng lệnh `/sticker` (hoặc gửi ảnh không cần lệnh) để mình tạo nhãn dán.")
 
-    # LỆNH LẠ
+    # MENU CHÍNH
+    elif cmd in ["/help", "menu", "hi"]:
+        menu = (
+            "✨➖ 🤖 **DANH SÁCH LỆNH BOT** 🤖➖✨\n"
+            "                    Tronglv📸\n"
+            "➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖\n"
+            "    🔮 **TAROT & TÂM LINH**\n"
+            "✨ 1./tarot : Bói bài Tarot\n\n"
+            "    🎵 **ÂM NHẠC**\n"
+            "🎧 2./nhac [tên] : Tìm nhạc Youtube\n\n"
+            "    🕒 **THỜI GIAN & SỰ KIỆN**\n"
+            "⏰ 3./time : Xem giờ hiện tại\n"
+            "⏳ 4./thptqg : Đếm ngược ngày thi\n"
+            "🎉 5./hld : Ngày lễ sắp tới\n\n"
+            "    📚 **TRA CỨU**\n"
+            "📖 6./wiki [từ] : Tra Wikipedia\n"
+            "🌐 7./gg [câu hỏi] : Link Google\n\n"
+            "    🎮 **GIẢI TRÍ**\n"
+            "✊ 8./kbb : Chơi Kéo Búa Bao\n"
+            "🤣 9./meme : Xem ảnh chế\n"
+            "🎬 10./anime : Gợi ý Anime\n\n"
+            "    🎁 **GAME**\n"
+            "🎟️ 11./code [game] : Giftcode game\n"
+            "🆕 12./updt [game] : Thông tin update\n"
+            "🕵️ 13./leak [game] : Tổng hợp leak\n"
+            "🏷️ 14./banner [game] : Banner hiện tại\n\n"
+            "    🖼️ **HÌNH ẢNH**\n"
+            "🖌️ 15./sticker : Gửi ảnh để tạo sticker\n\n"
+            "*(💡 Mẹo: Bạn có thể gõ số 1, 2, 3... thay vì gõ lệnh)*"
+        )
+        send_text(user_id, menu)
     else:
         send_text(user_id, "Lệnh không đúng. Gõ /help để xem Menu.")
 
-# ================= 7. ROUTER & MAIN HANDLER =================
+# ================= 7. QUY TRÌNH HỘI THOẠI (TAROT SESSION) =================
+
+def handle_tarot_flow(user_id, text, payload):
+    session = tarot_sessions.get(user_id, {"step": 0})
+    
+    # Anti-Reset: Khôi phục session nếu bị mất
+    if payload and "SPREAD_" in payload:
+        spread_id = payload.replace("SPREAD_", "")
+        send_typing(user_id)
+        result = execute_tarot_reading(spread_id, topic="Khôi phục", question="Tự nhẩm")
+        send_text(user_id, result)
+        if user_id in tarot_sessions: del tarot_sessions[user_id]
+        return
+
+    # STEP 1: Topic -> Hỏi câu hỏi
+    if session["step"] == 1:
+        session["topic"] = payload if payload else text
+        session["step"] = 2
+        tarot_sessions[user_id] = session
+        send_text(user_id, f"Bạn muốn hỏi gì về '{session['topic']}'? (Gõ '.' để bỏ qua)")
+        return
+
+    # STEP 2: Câu hỏi -> Hỏi thông tin
+    if session["step"] == 2:
+        session["question"] = text
+        session["step"] = 3
+        tarot_sessions[user_id] = session
+        send_quick_reply(user_id, "Cho mình biết Cung Hoàng Đạo/Ngày sinh nhé?", [("Bỏ qua", "SKIP_INFO")])
+        return
+
+    # STEP 3: Thông tin -> Chọn Spread
+    if session["step"] == 3:
+        session["info"] = text
+        session["step"] = 4
+        tarot_sessions[user_id] = session
+        options = [("1 Lá", "SPREAD_1"), ("3 Lá", "SPREAD_3"), ("5 Lá", "SPREAD_5"), ("Celtic", "SPREAD_10"), ("Zodiac", "SPREAD_12")]
+        send_quick_reply(user_id, "🔹 CHỌN CÁCH TRẢI BÀI:", options)
+        return
+
+# ================= 8. MAIN HANDLER (WEBHOOK) =================
 
 @app.route("/", methods=['GET'])
 def verify_webhook():
@@ -374,28 +403,27 @@ def webhook_handler():
                     payload = event.get("message", {}).get("quick_reply", {}).get("payload")
                     attachments = event.get("message", {}).get("attachments")
 
-                    # 1. Xử lý Sticker (Ảnh)
+                    # 1. Sticker (Ảnh)
                     if attachments and attachments[0]["type"] == "image":
                         send_text(sender_id, "🖼️ Đang tạo sticker...")
                         send_image(sender_id, attachments[0]["payload"]["url"])
                         continue
 
-                    # 2. Xử lý Gõ Số (1, 2, 3...) -> Chuyển thành lệnh
+                    # 2. Số thứ tự (Mapping 1-15)
                     if text in NUMBER_MAP:
-                        # Giả vờ người dùng gõ lệnh đầy đủ
                         handle_command(sender_id, NUMBER_MAP[text], [])
                         continue
 
-                    # 3. Xử lý Tarot Flow
+                    # 3. Tarot Session
                     if sender_id in tarot_sessions or (payload and "SPREAD_" in payload):
-                        if text.lower() in ["hủy", "/stop", "/cancel"]:
+                        if text.lower() in ["hủy", "/stop"]:
                             if sender_id in tarot_sessions: del tarot_sessions[sender_id]
-                            send_text(sender_id, "Đã hủy bói bài.")
+                            send_text(sender_id, "Đã hủy.")
                             continue
                         handle_tarot_flow(sender_id, text, payload)
                         continue
 
-                    # 4. Xử lý Game KBB
+                    # 4. Kéo Búa Bao
                     if sender_id in kbb_state and payload:
                         bot = random.choice(["KEO", "BUA", "BAO"])
                         map_i = {"KEO":"✌️", "BUA":"✊", "BAO":"✋"}
@@ -404,23 +432,15 @@ def webhook_handler():
                         del kbb_state[sender_id]
                         continue
 
-                    # 5. Xử lý Lệnh thường (Bắt đầu bằng /)
+                    # 5. Lệnh & Chat
                     if text.startswith("/"):
                         parts = text.split()
                         handle_command(sender_id, parts[0], parts[1:])
-                    
-                    # 6. Chat tự động
                     elif text:
                         if text.lower() in ["hi", "alo", "menu"]:
                             handle_command(sender_id, "/help", [])
                         else:
-                            replies = [
-                                "Gõ /help hoặc gõ số 1-12 để chọn lệnh nha.",
-                                "Mình đang nghe đây...",
-                                "Muốn bói bài không? Gõ số 1 nhé.",
-                                "Câu này khó quá, bỏ qua đi :v"
-                            ]
-                            send_text(sender_id, random.choice(replies))
+                            send_text(sender_id, "Gõ /help hoặc số 1-15 để dùng lệnh nha.")
 
         return "ok", 200
     except Exception as e:
@@ -429,4 +449,3 @@ def webhook_handler():
 
 if __name__ == "__main__":
     app.run(port=5000)
-
