@@ -24,8 +24,6 @@ except:
 # ================= 2. CƠ SỞ DỮ LIỆU (DATABASE) =================
 
 # --- A. BIẾN LƯU TRẠNG THÁI (SESSION) ---
-# Lưu ý: Trên Render Free, biến này sẽ mất khi server restart (khoảng 15p không dùng).
-# Code đã thêm logic "bắt lại" session nếu bị mất.
 kbb_state = {} 
 tarot_sessions = {} 
 
@@ -39,7 +37,7 @@ GAME_CODES = {
     "playtogether": ["PT2025", "KAIAISLAND"]
 }
 
-# --- C. DỮ LIỆU TAROT 78 LÁ ---
+# --- C. DỮ LIỆU TAROT 78 LÁ (ĐÃ SỬA LỖI CÚ PHÁP) ---
 MAJORS = {
     0: ("The Fool", "Khởi đầu mới, tự do", "Liều lĩnh, khờ khại"),
     1: ("The Magician", "Kỹ năng, ý chí", "Thao túng, lừa dối"),
@@ -70,6 +68,7 @@ SUITS = {
     "Swords": ("Kiếm", "Khí - Trí tuệ"),
     "Pentacles": ("Tiền", "Đất - Tiền bạc")
 }
+# Đã sửa lại cú pháp List of Tuples chuẩn chỉnh
 RANKS = [
     ("Ace", "Cơ hội mới", "Bỏ lỡ"),
     ("Two", "Cân bằng", "Mất cân bằng"),
@@ -82,9 +81,9 @@ RANKS = [
     ("Nine", "Độc lập", "Phụ thuộc"),
     ("Ten", "Trọn vẹn", "Tan vỡ"),
     ("Page", "Tin tức", "Tin xấu"),
-    "Knight": ("Hành động", "Bốc đồng"),
-    "Queen": ("Thấu hiểu", "Lạnh lùng"),
-    "King": ("Kiểm soát", "Lạm quyền")
+    ("Knight", "Hành động", "Bốc đồng"),
+    ("Queen", "Thấu hiểu", "Lạnh lùng"),
+    ("King", "Kiểm soát", "Lạm quyền")
 ]
 
 # Các kiểu trải bài
@@ -146,7 +145,7 @@ def generate_deck():
             })
     return deck
 
-def execute_tarot_reading(user_id, spread_id, topic="Chung", question=""):
+def execute_tarot_reading(spread_id, topic="Chung", question=""):
     """Thực hiện xào bài, bốc bài và trả về kết quả văn bản"""
     try:
         # 1. Chuẩn bị
@@ -173,7 +172,7 @@ def execute_tarot_reading(user_id, spread_id, topic="Chung", question=""):
                 "meaning": card["rev"] if is_rev else card["up"]
             })
         
-        # 3. Tạo nội dung trả lời
+        # 3. Tạo nội dung trả lời (TRỰC TIẾP RA TEXT, KHÔNG QUA JSON)
         msg = f"🔮 **KẾT QUẢ TAROT** 🔮\n"
         msg += f"❤️ Chủ đề: {topic}\n"
         if question: msg += f"❓ Câu hỏi: {question}\n"
@@ -188,9 +187,9 @@ def execute_tarot_reading(user_id, spread_id, topic="Chung", question=""):
         msg += "➖➖➖➖➖➖➖➖\n"
         msg += "💡 **LỜI KHUYÊN:**\n"
         if major_count >= count/2:
-            msg += "⚠️ Nhiều lá Ẩn Chính xuất hiện: Đây là giai đoạn ĐỊNH MỆNH quan trọng, hãy cân nhắc kỹ.\n"
+            msg += "⚠️ Nhiều lá Ẩn Chính: Giai đoạn ĐỊNH MỆNH quan trọng, cân nhắc kỹ.\n"
         else:
-            msg += "✅ Nhiều lá Ẩn Phụ: Vấn đề này thuộc đời sống thường nhật, bạn có thể thay đổi kết quả bằng hành động.\n"
+            msg += "✅ Nhiều lá Ẩn Phụ: Vấn đề đời thường, có thể thay đổi bằng hành động.\n"
             
         return msg
     except Exception as e:
@@ -199,18 +198,18 @@ def execute_tarot_reading(user_id, spread_id, topic="Chung", question=""):
 # ================= 5. QUY TRÌNH HỘI THOẠI (STATE MACHINE) =================
 
 def handle_tarot_flow(user_id, text, payload):
-    # Lấy session hiện tại hoặc tạo mới
+    # Lấy session hiện tại
     session = tarot_sessions.get(user_id, {"step": 0})
     
-    # CASE ĐẶC BIỆT: Nếu người dùng bấm nút chọn Spread mà bị mất session (do server restart)
-    # Ta tự động khôi phục và trả kết quả luôn
+    # CASE ĐẶC BIỆT: Khôi phục session nếu bị mất (Anti-Reset)
+    # Nếu payload chứa "SPREAD_", nghĩa là người dùng đang bấm chọn trải bài
     if payload and "SPREAD_" in payload:
         spread_id = payload.replace("SPREAD_", "")
         send_typing(user_id)
         send_text(user_id, f"🔀 Đang xào bài cho trải bài {SPREADS.get(spread_id, {}).get('name', 'Nhanh')}...")
         
-        # Thực hiện bói ngay
-        result = execute_tarot_reading(user_id, spread_id, topic="Khôi phục", question="Tự nhẩm trong đầu")
+        # Thực hiện bói ngay lập tức
+        result = execute_tarot_reading(spread_id, topic="Khôi phục", question="Tự nhẩm")
         send_text(user_id, result)
         
         if user_id in tarot_sessions: del tarot_sessions[user_id]
@@ -220,7 +219,7 @@ def handle_tarot_flow(user_id, text, payload):
     if session["step"] == 1:
         session["topic"] = payload if payload else text
         session["step"] = 2
-        tarot_sessions[user_id] = session # Cập nhật
+        tarot_sessions[user_id] = session
         send_text(user_id, f"Bạn muốn hỏi cụ thể gì về '{session['topic']}'? (Hoặc gõ '.' để bỏ qua)")
         return
 
@@ -230,7 +229,7 @@ def handle_tarot_flow(user_id, text, payload):
         session["step"] = 3
         tarot_sessions[user_id] = session
         options = [("Bỏ qua", "SKIP_INFO")]
-        send_quick_reply(user_id, "Cho mình biết Cung Hoàng Đạo/Ngày sinh để kết nối tốt hơn nhé? (Bấm Bỏ qua nếu ngại)", options)
+        send_quick_reply(user_id, "Cho mình biết Cung Hoàng Đạo/Ngày sinh nhé? (Bấm Bỏ qua nếu ngại)", options)
         return
 
     # STEP 3: Nhập Info -> Chọn Spread
@@ -248,11 +247,6 @@ def handle_tarot_flow(user_id, text, payload):
         ]
         send_quick_reply(user_id, "🔹 CHỌN CÁCH TRẢI BÀI:", options)
         return
-
-    # STEP 4: Xử lý chọn Spread -> Kết quả (Đã xử lý ở Case Đặc Biệt trên, nhưng để logic clean thì thêm ở đây)
-    if session["step"] == 4:
-        # Code không bao giờ chạy tới đây vì nút bấm sẽ lọt vào Case Đặc Biệt ở đầu hàm
-        pass
 
 # ================= 6. XỬ LÝ LỆNH (COMMANDS) =================
 
@@ -374,21 +368,19 @@ def webhook_handler():
                 for event in entry["messaging"]:
                     sender_id = event["sender"]["id"]
                     
-                    # 1. Lấy dữ liệu (Text, Payload, Attachments)
+                    # 1. Lấy dữ liệu
                     text = event.get("message", {}).get("text", "").strip()
                     payload = event.get("message", {}).get("quick_reply", {}).get("payload")
                     attachments = event.get("message", {}).get("attachments")
 
-                    # --- ƯU TIÊN 1: Xử lý Sticker (Ảnh) ---
+                    # --- ƯU TIÊN 1: Sticker ---
                     if attachments and attachments[0]["type"] == "image":
                         send_text(sender_id, "🖼️ Đang tạo sticker...")
                         send_image(sender_id, attachments[0]["payload"]["url"])
                         continue
 
-                    # --- ƯU TIÊN 2: Xử lý Tarot (Session & Recovery) ---
-                    # Nếu có session HOẶC người dùng bấm nút SPREAD (khôi phục session)
+                    # --- ƯU TIÊN 2: Tarot (Có cơ chế khôi phục) ---
                     if sender_id in tarot_sessions or (payload and "SPREAD_" in payload):
-                        # Nếu gõ lệnh hủy
                         if text.lower() in ["hủy", "/stop", "/cancel"]:
                             if sender_id in tarot_sessions: del tarot_sessions[sender_id]
                             send_text(sender_id, "Đã hủy bói bài.")
@@ -397,7 +389,7 @@ def webhook_handler():
                         handle_tarot_flow(sender_id, text, payload)
                         continue
 
-                    # --- ƯU TIÊN 3: Xử lý Kéo Búa Bao ---
+                    # --- ƯU TIÊN 3: Game KBB ---
                     if sender_id in kbb_state and payload:
                         bot = random.choice(["KEO", "BUA", "BAO"])
                         map_i = {"KEO":"✌️", "BUA":"✊", "BAO":"✋"}
@@ -406,16 +398,16 @@ def webhook_handler():
                         del kbb_state[sender_id]
                         continue
 
-                    # --- ƯU TIÊN 4: Lệnh & Chat ---
+                    # --- ƯU TIÊN 4: Lệnh ---
                     if text.startswith("/"):
                         parts = text.split()
                         handle_command(sender_id, parts[0], parts[1:])
+                    
+                    # --- ƯU TIÊN 5: Chat ---
                     elif text:
-                        # Chat tự động đơn giản
                         if text.lower() in ["hi", "alo", "menu"]:
                             handle_command(sender_id, "/help", [])
                         else:
-                            # Không spam "Gõ /help" nữa, chỉ trả lời vui
                             replies = [
                                 "Gõ /help để xem mình làm được gì nha.",
                                 "Mình đang nghe đây...",
