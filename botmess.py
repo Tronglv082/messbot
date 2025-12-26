@@ -12,11 +12,11 @@ from googlesearch import search
 # ================= CẤU HÌNH BOT =================
 app = Flask(__name__)
 
-# ĐÃ CẬP NHẬT TOKEN MỚI CỦA BẠN TẠI ĐÂY
-ACCESS_TOKEN = "EAAJpiB62hRwBQQjVYulX1G6CRANSKLCZBPxF4UhFSZCCebg7uSGCcZAPOti7jjXgUNZCOOfe624MIZBfuCAZCNfaZANLCcKxO3QSomx8mW4xhbOlGzsXwrKDiuO5avRfDnP4DNQdrZB26ni8IZCfqdzjczrbITe2snoFBZBJDUNxxUZC922FvjuIZArIwLN6nqjvwb7HxWNGxIkWawZDZD"
+# 👇👇👇 DÁN TOKEN CỦA BẠN VÀO ĐÂY 👇👇👇
+ACCESS_TOKEN = "DÁN_TOKEN_CỦA_BẠN_VÀO_ĐÂY"
 VERIFY_TOKEN = "bot 123"
 
-# Cấu hình ngôn ngữ cho Wikipedia
+# Cấu hình Wiki tiếng Việt
 try:
     wikipedia.set_lang("vi")
 except:
@@ -25,177 +25,294 @@ except:
 # Biến lưu trạng thái game
 kbb_state = {} 
 
-# Data giả lập
-GAME_CODES = {
-    "genshin": ["GENSHINGIFT", "CA3BLTURGH9D", "RTJUNRSHTREW"],
-    "hsr": ["STARRAILGIFT", "HSRVER10JRL", "MB6N2TVCSQ9F"],
-    "wuwa": ["WUWA2024", "WUTHERINGGIFT"],
-    "wwm": ["WWMVIETNAM", "KIEMHIEP2025"]
-}
+# ================= DỮ LIỆU & TỪ ĐIỂN =================
 
-TAROT_CARDS = [
-    {"name": "The Fool", "meaning": "Khởi đầu mới, tự do, ngây thơ."},
-    {"name": "The Magician", "meaning": "Sức mạnh ý chí, kỹ năng, sự tập trung."},
-    {"name": "The Lovers", "meaning": "Tình yêu, sự hòa hợp, sự lựa chọn."},
-    {"name": "Death", "meaning": "Kết thúc để bắt đầu, sự thay đổi lớn."},
-    {"name": "The Sun", "meaning": "Thành công, niềm vui, năng lượng tích cực."},
+# 1. Các câu chém gió đầu câu (để bớt cụt ngủn)
+FUNNY_PREFIXES = [
+    "Thưa đại vương, ", "Ối dồi ôi, ", "Theo thông tin mật thì ", 
+    "Bot xin thưa rằng: ", "Đừng bất ngờ nhé, ", "Tin chuẩn 100%: ",
+    "Vâng thưa sếp, ", "Hệ thống ghi nhận là: "
 ]
+
+# 2. Dữ liệu Tarot Full 78 lá (Rút gọn logic để code không quá dài)
+MAJOR_ARCANA = {
+    0: ("The Fool", "Sự khởi đầu mới, ngây thơ, tự do, liều lĩnh."),
+    1: ("The Magician", "Sức mạnh ý chí, kỹ năng, sự tập trung, hành động."),
+    2: ("The High Priestess", "Trực giác, bí ẩn, tiềm thức, sự tĩnh lặng."),
+    3: ("The Empress", "Sự trù phú, thiên nhiên, tình mẫu tử, vẻ đẹp."),
+    4: ("The Emperor", "Quyền lực, cấu trúc, sự ổn định, lãnh đạo."),
+    5: ("The Hierophant", "Truyền thống, niềm tin, tôn giáo, sự tuân thủ."),
+    6: ("The Lovers", "Tình yêu, sự hòa hợp, sự lựa chọn, mối quan hệ."),
+    7: ("The Chariot", "Chiến thắng, ý chí, kiểm soát, di chuyển."),
+    8: ("Strength", "Sức mạnh nội tâm, lòng can đảm, kiên nhẫn."),
+    9: ("The Hermit", "Sự cô đơn, tìm kiếm chân lý, nội tâm."),
+    10: ("Wheel of Fortune", "Vận mệnh, sự thay đổi, chu kỳ, may mắn."),
+    11: ("Justice", "Công lý, sự thật, luật nhân quả."),
+    12: ("The Hanged Man", "Sự hy sinh, góc nhìn mới, chờ đợi."),
+    13: ("Death", "Sự kết thúc, buông bỏ, chuyển hóa (không hẳn là chết)."),
+    14: ("Temperance", "Sự cân bằng, kiên nhẫn, điều độ."),
+    15: ("The Devil", "Sự cám dỗ, ràng buộc, vật chất, nghiện ngập."),
+    16: ("The Tower", "Sự sụp đổ bất ngờ, tai họa, sự thức tỉnh."),
+    17: ("The Star", "Hy vọng, niềm tin, sự chữa lành, cảm hứng."),
+    18: ("The Moon", "Ảo tưởng, nỗi sợ hãi, tiềm thức, giấc mơ."),
+    19: ("The Sun", "Thành công, niềm vui, sự rõ ràng, năng lượng tích cực."),
+    20: ("Judgement", "Sự phán xét, tái sinh, tiếng gọi nội tâm."),
+    21: ("The World", "Sự hoàn thành, trọn vẹn, kết thúc một hành trình.")
+}
+SUITS = {"Wands": "Lửa - Hành động", "Cups": "Nước - Cảm xúc", "Swords": "Khí - Trí tuệ", "Pentacles": "Đất - Vật chất"}
+RANKS = {
+    "Ace": "Khởi đầu mới", "Two": "Sự cân bằng/lựa chọn", "Three": "Sự phát triển/hợp tác",
+    "Four": "Sự ổn định/nghỉ ngơi", "Five": "Mất mát/xung đột", "Six": "Hồi tưởng/chia sẻ",
+    "Seven": "Đánh giá/ảo tưởng", "Eight": "Sức mạnh/bế tắc", "Nine": "Độc lập/lo lắng",
+    "Ten": "Trọn vẹn/gánh nặng", "Page": "Thông điệp mới", "Knight": "Hành động nhanh",
+    "Queen": "Sự nuôi dưỡng", "King": "Sự kiểm soát"
+}
 
 # ================= HÀM GỬI TIN =================
 
-def send_message(recipient_id, text):
-    """Gửi tin nhắn văn bản"""
-    params = {"access_token": ACCESS_TOKEN}
+def send_typing(user_id):
+    """Hiệu ứng đang soạn tin..."""
     headers = {"Content-Type": "application/json"}
-    data = json.dumps({
-        "recipient": {"id": recipient_id},
-        "message": {"text": text}
-    })
+    data = json.dumps({"recipient": {"id": user_id}, "sender_action": "typing_on"})
     try:
-        r = requests.post("https://graph.facebook.com/v17.0/me/messages", params=params, headers=headers, data=data)
-        if r.status_code != 200:
-            print(f"Lỗi gửi tin: {r.text}")
-    except Exception as e:
-        print(f"Lỗi kết nối: {e}")
+        requests.post(f"https://graph.facebook.com/v17.0/me/messages?access_token={ACCESS_TOKEN}", headers=headers, data=data)
+    except: pass
 
-def send_image(recipient_id, image_url):
+def send_text(user_id, text):
+    """Gửi tin nhắn text"""
+    headers = {"Content-Type": "application/json"}
+    data = json.dumps({"recipient": {"id": user_id}, "message": {"text": text}})
+    try:
+        requests.post(f"https://graph.facebook.com/v17.0/me/messages?access_token={ACCESS_TOKEN}", headers=headers, data=data)
+    except: pass
+
+def send_image(user_id, url):
     """Gửi ảnh"""
-    params = {"access_token": ACCESS_TOKEN}
     headers = {"Content-Type": "application/json"}
     data = json.dumps({
-        "recipient": {"id": recipient_id},
-        "message": {
-            "attachment": {
-                "type": "image",
-                "payload": {"url": image_url, "is_reusable": True}
-            }
-        }
+        "recipient": {"id": user_id},
+        "message": {"attachment": {"type": "image", "payload": {"url": url, "is_reusable": True}}}
     })
     try:
-        requests.post("https://graph.facebook.com/v17.0/me/messages", params=params, headers=headers, data=data)
-    except:
-        pass
+        requests.post(f"https://graph.facebook.com/v17.0/me/messages?access_token={ACCESS_TOKEN}", headers=headers, data=data)
+    except: pass
 
-# ================= XỬ LÝ LỆNH =================
-
-def handle_ai_command(user_id, command, args):
-    response_text = ""
+def send_quick_reply(user_id, text, options):
+    """Gửi nút bấm nhanh"""
+    q_replies = [{"content_type": "text", "title": t, "payload": p} for t, p in options]
+    headers = {"Content-Type": "application/json"}
+    data = json.dumps({
+        "recipient": {"id": user_id},
+        "messaging_type": "RESPONSE",
+        "message": {"text": text, "quick_replies": q_replies}
+    })
     try:
-        if command == "/help":
-            response_text = "🤖 MENU: /nhac, /time, /thptqg, /wiki, /gg, /code, /updt, /meme, /tarot, /anime, /kbb"
+        requests.post(f"https://graph.facebook.com/v17.0/me/messages?access_token={ACCESS_TOKEN}", headers=headers, data=data)
+    except: pass
 
-        elif command == "/nhac":
+# ================= LOGIC XỬ LÝ =================
+
+def get_tarot_card():
+    """Rút 1 lá bài chuẩn Tarot 78 lá"""
+    # 30% ra ẩn chính, 70% ra ẩn phụ
+    if random.random() < 0.3:
+        idx = random.choice(list(MAJOR_ARCANA.keys()))
+        name, mean = MAJOR_ARCANA[idx]
+        return f"🃏 ẨN CHÍNH: {name}\n✨ Ý nghĩa: {mean}"
+    else:
+        suit_en, suit_mean = random.choice(list(SUITS.items()))
+        rank_en, rank_mean = random.choice(list(RANKS.items()))
+        return f"🎴 ẨN PHỤ: {rank_en} of {suit_en}\n🌊 Nguyên tố: {suit_mean}\n🔑 Từ khóa: {rank_mean}"
+
+def chat_ai_simulation(text):
+    """Giả lập AI Chatbot khi không dùng lệnh"""
+    text = text.lower()
+    if "buồn" in text or "khóc" in text:
+        return "Thôi đừng buồn nữa, làm ván /kbb với mình cho đời vui lên nào! 🥺"
+    elif "chán" in text:
+        return "Chán thì gõ /nhac để nghe nhạc, hoặc /meme xem ảnh chế đi fen!"
+    elif "yêu" in text or "thích" in text:
+        return "Yêu đương gì tầm này, lo học hành đi. Gõ /thptqg xem còn bao nhiêu ngày kìa!"
+    elif "ngu" in text or "dốt" in text:
+        return "Ăn nói xà lơ! Tôi thông minh nhất hệ mặt trời đấy nhé. Thử /wiki xem."
+    elif "alo" in text or "ê" in text:
+        return "Nghe nè! Cần giúp gì thì gõ /help nha đại ca."
+    elif "ngủ" in text:
+        return "Chúc ngủ ngon nhé, mơ đẹp đừng mơ thấy bug!"
+    else:
+        return random.choice([
+            "Câu này khó quá, tôi chịu. Bạn thử gõ lệnh khác xem?",
+            "Tôi đang lắng nghe đây...",
+            "Thật thú vị! Kể tiếp đi.",
+            "Bạn nói gì tôi chưa hiểu lắm, nhưng nghe có vẻ uy tín đấy.",
+            "Gõ /help để xem tôi làm được gì nhé, chứ chém gió tôi hơi kém."
+        ])
+
+def handle_command(user_id, command, args):
+    send_typing(user_id) # Hiệu ứng đang gõ...
+    prefix = random.choice(FUNNY_PREFIXES) # Thêm câu dẫn hài hước
+
+    try:
+        # 1. MENU (Dọc & Bảnh)
+        if command in ["/help", "menu", "hi", "help"]:
+            menu = (
+                "╔══════════════╗\n"
+                "🤖   MENU BOT VIP   🤖\n"
+                "╚══════════════╝\n\n"
+                "🔥 **TIỆN ÍCH:**\n"
+                "1️⃣  /time  : Xem giờ Việt Nam\n"
+                "2️⃣  /wiki <từ> : Tra cứu Wikipedia\n"
+                "3️⃣  /gg <từ> : Tra Google\n"
+                "4️⃣  /thptqg : Đếm ngược ngày thi\n\n"
+                "🎮 **GIẢI TRÍ:**\n"
+                "5️⃣  /kbb : Kéo Búa Bao (Cực cuốn)\n"
+                "6️⃣  /tarot : Bói bài 78 lá chuẩn\n"
+                "7️⃣  /meme : Xem ảnh chế Anime\n"
+                "8️⃣  /nhac [tên] : Tìm nhạc Chill\n"
+                "9️⃣  /anime : Gợi ý phim hay\n\n"
+                "🎁 **QUÀ TẶNG:**\n"
+                "🔟 /code <game> : Genshin, HSR..."
+            )
+            send_text(user_id, menu)
+            return
+
+        # 2. GOOGLE (Đã sửa lỗi)
+        elif command == "/gg":
             if not args:
-                response_text = "🎶 Nhạc: https://www.youtube.com/watch?v=k5mX3NkA7jM"
+                send_text(user_id, prefix + "Bạn phải nhập câu hỏi chứ? Ví dụ: /gg giá vàng hôm nay")
             else:
-                q = "+".join(args)
-                response_text = f"🔎 Tìm nhạc: https://www.youtube.com/results?search_query={q}"
+                try:
+                    q = " ".join(args)
+                    # Lấy kết quả đầu tiên an toàn hơn
+                    res_iter = search(q, num_results=1, advanced=True)
+                    res = next(res_iter, None) # Lấy item đầu tiên
+                    
+                    if res:
+                        send_text(user_id, f"{prefix}Tìm thấy cái này trên Google:\n\n🌐 {res.title}\n👉 {res.url}\n\n📖 {res.description}")
+                    else:
+                        send_text(user_id, "Tìm đỏ mắt không thấy kết quả nào sếp ơi!")
+                except Exception as e:
+                    send_text(user_id, f"Google đang chặn bot rồi: {e}")
 
+        # 3. TAROT (Nâng cấp 78 lá)
+        elif command == "/tarot":
+            card_info = get_tarot_card()
+            send_text(user_id, f"🔮 {prefix}Vũ trụ gửi tín hiệu:\n\n{card_info}")
+
+        # 4. KÉO BÚA BAO
+        elif command == "/kbb":
+            kbb_state[user_id] = "WAITING"
+            send_quick_reply(user_id, 
+                "✊✌️✋ Kèo này căng! Bot đã úp bài.\nMời đại cao thủ ra chiêu:",
+                [("✌️ Kéo", "KEO"), ("✊ Búa", "BUA"), ("✋ Bao", "BAO")]
+            )
+
+        # 5. THỜI GIAN
         elif command == "/time":
             now = datetime.datetime.now(pytz.timezone('Asia/Ho_Chi_Minh'))
-            response_text = now.strftime("🕒 %H:%M:%S - %d/%m/%Y")
+            send_text(user_id, f"{prefix}Bây giờ là: {now.strftime('%H:%M:%S')} (Ngày {now.strftime('%d/%m/%Y')})\nChưa ngủ à?")
 
-        elif command == "/thptqg":
-            days = (datetime.datetime(2026, 6, 12) - datetime.datetime.now()).days
-            response_text = f"⏳ Còn {days} ngày tới THPTQG 2026!"
+        # 6. NHẠC
+        elif command == "/nhac":
+            if not args:
+                send_text(user_id, f"{prefix}Nghe bài này cho đỡ buồn đời: https://www.youtube.com/watch?v=k5mX3NkA7jM")
+            else:
+                q = "+".join(args)
+                send_text(user_id, f"{prefix}Link nhạc của sếp đây: https://www.youtube.com/results?search_query={q}")
 
+        # 7. WIKI
         elif command == "/wiki":
-            try:
-                response_text = wikipedia.summary(" ".join(args), sentences=2)
-            except:
-                response_text = "Không tìm thấy trên Wiki."
+            if not args:
+                send_text(user_id, "Tra gì thì nói đi chứ? Ví dụ: /wiki Sơn Tùng MTP")
+            else:
+                try:
+                    summary = wikipedia.summary(" ".join(args), sentences=3)
+                    send_text(user_id, f"📚 {prefix}Kiến thức này đã được tiếp thu:\n\n{summary}")
+                except:
+                    send_text(user_id, "Ca này khó, Wiki cũng bó tay rồi!")
 
-        elif command == "/gg":
-            try:
-                res = list(search(" ".join(args), num_results=1, advanced=True))
-                if res: response_text = f"{res[0].title}\n{res[0].url}"
-                else: response_text = "Không có kết quả."
-            except:
-                response_text = "Lỗi Google."
-
-        elif command == "/code":
-            g = args[0].lower() if args else ""
-            codes = GAME_CODES.get(g, ["Nhập tên game: genshin, hsr..."])
-            response_text = "\n".join(codes)
-
+        # 8. MEME
         elif command == "/meme":
             try:
                 r = requests.get("https://meme-api.com/gimme/animememes").json()
                 send_image(user_id, r.get("url"))
-                return
             except:
-                response_text = "Lỗi meme."
+                send_text(user_id, "Lỗi load ảnh rồi, quê quá...")
 
-        elif command == "/tarot":
-            card = random.choice(TAROT_CARDS)
-            response_text = f"🔮 {card['name']}: {card['meaning']}"
-
+        # 9. CODE GAME
+        elif command == "/code":
+            g = args[0].lower() if args else ""
+            if "genshin" in g: res = "Genshin Impact:\n🎁 GENSHINGIFT\n🎁 CA3BLTURGH9D"
+            elif "hsr" in g: res = "Honkai Star Rail:\n🎁 STARRAILGIFT\n🎁 HSRVER10JRL"
+            elif "wuwa" in g: res = "Wuthering Waves:\n🎁 WUTHERINGGIFT"
+            else: res = "Game này chưa có code, hoặc bạn nhập sai tên rồi (genshin, hsr, wuwa)."
+            send_text(user_id, f"🎁 {prefix}{res}")
+        
+        # 10. ANIME
         elif command == "/anime":
-            animes = ["Naruto", "One Piece", "Bleach"]
-            response_text = f"🎬 Anime: {random.choice(animes)}"
+            animes = ["Naruto", "One Piece", "Attack on Titan", "Frieren", "Doraemon", "Bleach"]
+            send_text(user_id, f"🎬 {prefix}Cày bộ này đi hay lắm: {random.choice(animes)}")
 
-        elif command == "/kbb":
-            kbb_state[user_id] = "WAITING"
-            response_text = "✊✌️✋ Đã úp bài. Bạn chọn: kéo, búa, bao?"
+        # 11. THPTQG
+        elif command == "/thptqg":
+            days = (datetime.datetime(2026, 6, 12) - datetime.datetime.now()).days
+            send_text(user_id, f"⏳ {prefix}Chỉ còn {days} ngày nữa là thi THPTQG 2026. Học đi đừng lười!")
 
+        # LỆNH KHÔNG TỒN TẠI -> CHAT TỰ ĐỘNG
         else:
-            response_text = "Lệnh sai. Gõ /help."
+            # Nếu người dùng gõ lệnh sai (bắt đầu bằng /)
+            send_text(user_id, "Lệnh này lạ quá, tôi chưa học. Gõ /help để xem menu nhé.")
 
     except Exception as e:
-        response_text = f"Lỗi: {str(e)}"
-
-    send_message(user_id, response_text)
-
-def handle_kbb_logic(user_id, text):
-    choices = ['kéo', 'búa', 'bao']
-    if text not in choices: return False
-    
-    bot = random.choice(choices)
-    if text == bot: res = "Hòa!"
-    elif (text=='kéo' and bot=='bao') or (text=='búa' and bot=='kéo') or (text=='bao' and bot=='búa'):
-        res = "Bạn thắng!"
-    else: res = "Bot thắng!"
-    
-    send_message(user_id, f"📦 Bot ra {bot.upper()}. Kết quả: {res}")
-    del kbb_state[user_id]
-    return True
+        send_text(user_id, f"⚠️ Bot bị sặc nước rồi: {str(e)}")
 
 # ================= SERVER WEBHOOK =================
 
 @app.route("/", methods=['GET'])
 def verify_webhook():
-    """Xác minh Webhook"""
     if request.args.get("hub.verify_token") == VERIFY_TOKEN:
         return request.args.get("hub.challenge")
     return "Sai Token", 403
 
 @app.route("/", methods=['POST'])
 def webhook_handler():
-    """Nhận tin nhắn"""
     data = request.get_json()
     if data.get("object") == "page":
         for entry in data["entry"]:
             for event in entry["messaging"]:
-                if "message" in event:
-                    sender_id = event["sender"]["id"]
+                sender_id = event["sender"]["id"]
+
+                # 1. Xử lý Quick Reply (Game KBB)
+                if "message" in event and "quick_reply" in event["message"]:
+                    payload = event["message"]["quick_reply"]["payload"]
+                    if sender_id in kbb_state:
+                        bot_c = random.choice(["KEO", "BUA", "BAO"])
+                        map_name = {"KEO":"Kéo", "BUA":"Búa", "BAO":"Bao"}
+                        
+                        if payload == bot_c: res = "Hòa rồi! 🤝"
+                        elif (payload=="KEO" and bot_c=="BAO") or (payload=="BUA" and bot_c=="KEO") or (payload=="BAO" and bot_c=="BUA"):
+                            res = "Bạn thắng! Ghê đấy 🎉"
+                        else: res = "Bot thắng! Gà quá 🐔"
+                        
+                        send_text(sender_id, f"📦 Bot ra: {map_name[bot_c]}\n👉 Bạn chọn: {map_name[payload]}\n=> {res}")
+                        del kbb_state[sender_id]
+                    return "ok", 200
+
+                # 2. Xử lý Tin nhắn Text
+                if "message" in event and "text" in event["message"]:
+                    text = event["message"]["text"].strip()
                     
-                    # Xử lý ảnh
-                    if "attachments" in event["message"]:
-                        send_message(sender_id, "Đã nhận ảnh.")
-                        return "ok", 200
-
-                    # Xử lý text
-                    if "text" in event["message"]:
-                        text = event["message"]["text"].strip().lower()
-
-                        if sender_id in kbb_state:
-                            if handle_kbb_logic(sender_id, text): continue
-
-                        if text.startswith("/"):
-                            parts = text.split()
-                            handle_ai_command(sender_id, parts[0], parts[1:])
-                        else:
-                            send_message(sender_id, "Gõ /help để xem lệnh.")
+                    # Nếu là lệnh (bắt đầu bằng /) hoặc menu
+                    if text.startswith("/") or text.lower() in ["menu", "help", "hi", "chào"]:
+                        parts = text.split()
+                        cmd = parts[0].lower()
+                        args = parts[1:]
+                        handle_command(sender_id, cmd, args)
+                    else:
+                        # Chat tự động (Không phải lệnh)
+                        send_typing(sender_id)
+                        reply = chat_ai_simulation(text)
+                        send_text(sender_id, reply)
 
         return "ok", 200
     return "ok", 404
