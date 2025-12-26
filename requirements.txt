@@ -3,3 +3,4 @@ requests
 google-generativeai
 gunicorn
 python-dotenv
+wikipedia
