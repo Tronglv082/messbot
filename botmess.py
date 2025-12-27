@@ -21,7 +21,7 @@ VERIFY_TOKEN = "bot 123"
 try: wikipedia.set_lang("vi")
 except: pass
 
-# ================= 2. DỮ LIỆU & CẤU HÌNH =================
+# ================= 2. CẤU HÌNH HỆ THỐNG =================
 
 NUMBER_MAP = {
     "1": "/tarot", "2": "/baitay", "3": "/nhac", "4": "/time", "5": "/thptqg",
@@ -41,96 +41,100 @@ GAME_CODES = {
     "bloxfruit": ["SUB2GAMERROBOT", "KITGAMING"]
 }
 
-# --- DỮ LIỆU TAROT 78 LÁ (FULL 100% CHI TIẾT) ---
-MAJORS = {
-    0: ("The Fool", "một sự khởi đầu đầy ngây thơ, tự do, dám chấp nhận rủi ro để bước vào hành trình mới"),
-    1: ("The Magician", "năng lực hiện thực hóa ý tưởng, sự tập trung cao độ và kỹ năng làm chủ tình huống"),
-    2: ("The High Priestess", "trực giác sâu sắc, những bí ẩn chưa được tiết lộ và thế giới nội tâm phong phú"),
-    3: ("The Empress", "sự trù phú, vẻ đẹp của sự sáng tạo và tình yêu thương nuôi dưỡng"),
-    4: ("The Emperor", "tính kỷ luật sắt đá, cấu trúc vững chắc, quyền lực và khả năng lãnh đạo"),
-    5: ("The Hierophant", "niềm tin tâm linh, những giá trị truyền thống và sự học hỏi từ bậc thầy"),
-    6: ("The Lovers", "sự lựa chọn quan trọng từ trái tim, tình yêu đôi lứa và sự kết nối sâu sắc"),
-    7: ("The Chariot", "ý chí kiên cường, quyết tâm chiến thắng mọi trở ngại bằng sự kiểm soát"),
-    8: ("Strength", "sức mạnh nội tâm, lòng trắc ẩn và khả năng kiểm soát bản năng bằng sự mềm mỏng"),
-    9: ("The Hermit", "giai đoạn thu mình để chiêm nghiệm, tìm kiếm ánh sáng chân lý từ bên trong"),
-    10: ("Wheel of Fortune", "sự xoay vần của định mệnh, những thay đổi bất ngờ mang tính bước ngoặt"),
-    11: ("Justice", "sự công bằng, luật nhân quả và sự thật cần được phơi bày rõ ràng"),
-    12: ("The Hanged Man", "sự hy sinh cần thiết, chấp nhận dừng lại để nhìn vấn đề ở góc độ khác"),
-    13: ("Death", "một sự kết thúc để tái sinh, buông bỏ cái cũ kỹ để đón nhận cái mới mẻ"),
-    14: ("Temperance", "sự cân bằng, chữa lành, kiên nhẫn hòa hợp các mặt đối lập"),
-    15: ("The Devil", "những cám dỗ vật chất, sự ràng buộc độc hại hoặc đối mặt với bóng tối bên trong"),
-    16: ("The Tower", "sự sụp đổ bất ngờ của những niềm tin cũ, một sự thức tỉnh mạnh mẽ và đau đớn"),
-    17: ("The Star", "niềm hy vọng le lói nhưng bền bỉ, sự chữa lành sau tổn thương và niềm tin"),
-    18: ("The Moon", "những nỗi lo âu tiềm thức, sự mơ hồ, ảo ảnh và những điều chưa rõ ràng"),
-    19: ("The Sun", "niềm vui thuần khiết, sự thành công rực rỡ, năng lượng tích cực và sự rõ ràng"),
-    20: ("Judgement", "tiếng gọi thức tỉnh, sự phán xét cuối cùng, tha thứ để tái sinh"),
-    21: ("The World", "sự hoàn thành trọn vẹn, kết thúc một chu kỳ viên mãn để bước sang trang mới")
+# ================= 3. KHO TÀNG DỮ LIỆU TÂM LINH (FULL) =================
+
+# --- A. TAROT 78 LÁ (Cấu trúc: Tên, Xuôi, Ngược/Bóng tối, Lời khuyên) ---
+MAJORS_DATA = {
+    0: ("The Fool", "sự khởi đầu đầy ngây thơ, tự do và tiềm năng vô hạn", "sự liều lĩnh ngu ngốc, ngây thơ quá mức hoặc rủi ro không đáng có", "hãy dũng cảm bước đi nhưng đừng quên nhìn đường"),
+    1: ("The Magician", "năng lực hiện thực hóa, sự tập trung và kỹ năng điêu luyện", "sự thao túng, lừa dối hoặc tài năng bị sử dụng sai mục đích", "bạn có đủ mọi nguồn lực, hãy tin vào khả năng của mình"),
+    2: ("The High Priestess", "trực giác sâu sắc, bí ẩn và thế giới nội tâm phong phú", "bí mật bị lộ, sự lạnh lùng hoặc ngắt kết nối với trực giác", "hãy lắng nghe tiếng nói nhỏ bé bên trong bạn"),
+    3: ("The Empress", "sự trù phú, tình yêu thương nuôi dưỡng và vẻ đẹp sáng tạo", "sự phụ thuộc cảm xúc, thiếu thốn hoặc ghen tuông", "hãy yêu thương bản thân và kết nối với thiên nhiên"),
+    4: ("The Emperor", "kỷ luật sắt đá, cấu trúc vững chắc và khả năng lãnh đạo", "sự độc tài, cứng nhắc hoặc thiếu linh hoạt", "cần thiết lập ranh giới và quy tắc rõ ràng"),
+    5: ("The Hierophant", "niềm tin, truyền thống và sự học hỏi từ bậc thầy", "sự giáo điều, đạo đức giả hoặc nổi loạn vô cớ", "hãy tìm kiếm chân lý nhưng đừng mù quáng tin theo"),
+    6: ("The Lovers", "sự lựa chọn từ trái tim, tình yêu đôi lứa và kết nối sâu sắc", "sự mất cân bằng, chia ly hoặc lựa chọn sai lầm", "hãy chọn điều mà trái tim bạn thực sự khao khát"),
+    7: ("The Chariot", "ý chí kiên cường, quyết tâm chiến thắng mọi trở ngại", "sự hung hăng, mất kiểm soát hoặc hiếu thắng", "kiểm soát cảm xúc là chìa khóa của thành công"),
+    8: ("Strength", "sức mạnh nội tâm, lòng trắc ẩn và sự kiểm soát mềm mỏng", "sự yếu đuối, thiếu tự tin hoặc bạo lực", "lạt mềm buộc chặt, hãy dùng tình thương để hóa giải"),
+    9: ("The Hermit", "sự thu mình để chiêm nghiệm, tìm kiếm ánh sáng chân lý", "sự cô lập, xa lánh xã hội hoặc hoang tưởng", "dành thời gian một mình để hiểu rõ bản thân hơn"),
+    10: ("Wheel of Fortune", "sự xoay vần của định mệnh, thay đổi bất ngờ", "xui xẻo, sự trì trệ hoặc kháng cự lại thay đổi", "chấp nhận sự thay đổi như một phần tất yếu của cuộc sống"),
+    11: ("Justice", "sự công bằng, nhân quả và sự thật phơi bày", "sự bất công, thiên vị hoặc dối trá", "hãy trung thực với chính mình, gieo nhân nào gặt quả nấy"),
+    12: ("The Hanged Man", "sự hy sinh, nhìn vấn đề ở góc độ khác", "sự bế tắc, hy sinh vô ích hoặc đóng vai nạn nhân", "đôi khi lùi một bước là để tiến ba bước"),
+    13: ("Death", "kết thúc để tái sinh, buông bỏ cái cũ", "sự sợ hãi thay đổi, trì trệ hoặc không dám buông tay", "cánh cửa này đóng lại sẽ có cánh cửa khác mở ra"),
+    14: ("Temperance", "sự cân bằng, chữa lành và kiên nhẫn", "sự mất cân bằng, vội vã hoặc xung đột", "hãy tìm điểm giữa, đừng quá cực đoan"),
+    15: ("The Devil", "cám dỗ, ràng buộc vật chất hoặc nỗi sợ", "sự giải thoát, cai nghiện hoặc đối mặt với bóng tối", "đừng để dục vọng hay nỗi sợ kiểm soát bạn"),
+    16: ("The Tower", "sự sụp đổ bất ngờ của niềm tin cũ", "sự sợ hãi thảm họa hoặc cố chấp níu giữ cái đã hỏng", "để xây lại cái mới tốt đẹp hơn, cái cũ mục nát phải sụp đổ"),
+    17: ("The Star", "niềm hy vọng, sự chữa lành và niềm tin", "sự thất vọng, bi quan hoặc mất niềm tin", "hãy giữ vững niềm tin, ánh sáng luôn ở cuối đường hầm"),
+    18: ("The Moon", "nỗi lo âu tiềm thức, ảo ảnh mơ hồ", "sự giải tỏa nỗi sợ, sự thật được phơi bày", "đừng để trí tưởng tượng tiêu cực dọa dẫm bạn"),
+    19: ("The Sun", "niềm vui thuần khiết, thành công rực rỡ", "sự u ám tạm thời hoặc kỳ vọng quá cao", "hãy tỏa sáng và tận hưởng niềm vui sống"),
+    20: ("Judgement", "tiếng gọi thức tỉnh, phán xét cuối cùng", "sự chối bỏ, hối tiếc hoặc không dám đối diện", "đã đến lúc đưa ra quyết định quan trọng"),
+    21: ("The World", "sự hoàn thành trọn vẹn, viên mãn", "sự dang dở, thiếu một mảnh ghép cuối cùng", "bạn đang ở rất gần đích đến, hãy kiên trì thêm chút nữa")
 }
 
-MINORS = {
-    # WANDS (Gậy - Lửa - Hành động)
-    "Ace of Wands": "một tia lửa cảm hứng bất ngờ, cơ hội mới đầy nhiệt huyết và đam mê bùng cháy",
-    "Two of Wands": "lập kế hoạch cho tương lai, tầm nhìn xa và quyết định bước ra khỏi vùng an toàn",
-    "Three of Wands": "sự mở rộng, chờ đợi kết quả từ những nỗ lực đã gieo trồng, nhìn ra thế giới rộng lớn",
-    "Four of Wands": "niềm vui của sự sum họp, ăn mừng thành quả bước đầu, sự ổn định và hạnh phúc",
-    "Five of Wands": "những cuộc tranh luận, mâu thuẫn hoặc cạnh tranh, nhưng là để rèn giũa bản lĩnh",
-    "Six of Wands": "sự chiến thắng, vinh quang, được mọi người công nhận và tán thưởng",
-    "Seven of Wands": "sự phòng thủ, kiên định bảo vệ lập trường của mình trước nhiều áp lực",
-    "Eight of Wands": "mọi thứ diễn ra rất nhanh, tin tức đến dồn dập, hành động dứt khoát",
-    "Nine of Wands": "sự kiên trì dù đã mệt mỏi, đề phòng và bảo vệ những gì mình đã xây dựng",
-    "Ten of Wands": "gánh nặng trách nhiệm quá lớn, sự quá tải cần được san sẻ hoặc buông bỏ bớt",
-    "Page of Wands": "một tin tức thú vị, sự tò mò khám phá và tinh thần phiêu lưu của tuổi trẻ",
-    "Knight of Wands": "hành động bốc đồng, nhiệt huyết dâng trào nhưng đôi khi thiếu sự kiên nhẫn",
-    "Queen of Wands": "sự tự tin, quyến rũ, năng lượng ấm áp và khả năng thu hút người khác",
-    "King of Wands": "nhà lãnh đạo có tầm nhìn, người truyền cảm hứng và dám nghĩ dám làm",
-
-    # CUPS (Cốc - Nước - Cảm xúc)
-    "Ace of Cups": "một tình cảm mới chớm nở, trái tim rộng mở và trực giác nhạy bén",
-    "Two of Cups": "sự kết nối đôi lứa, tình yêu hòa hợp hoặc một mối quan hệ đối tác ăn ý",
-    "Three of Cups": "niềm vui của tình bạn, sự tụ tập ăn mừng và chia sẻ cảm xúc",
-    "Four of Cups": "sự chán nản, thờ ơ với những cơ hội đang được đưa đến trước mắt",
-    "Five of Cups": "nỗi buồn về những gì đã mất, sự tiếc nuối quá khứ mà quên đi hiện tại",
-    "Six of Cups": "những ký ức ngọt ngào quay về, sự hoài niệm hoặc gặp lại người xưa",
-    "Seven of Cups": "những ảo tưởng, quá nhiều lựa chọn mơ hồ và sự thiếu thực tế",
-    "Eight of Cups": "sự dũng cảm bỏ lại những gì không còn phù hợp để đi tìm ý nghĩa thật sự",
-    "Nine of Cups": "điều ước thành hiện thực, sự hài lòng và thỏa mãn về mặt cảm xúc",
-    "Ten of Cups": "hạnh phúc viên mãn, gia đình êm ấm và sự trọn vẹn trong tình cảm",
-    "Page of Cups": "một tin nhắn tình cảm, sự nhạy cảm, mơ mộng và trực giác ngây thơ",
-    "Knight of Cups": "lời đề nghị lãng mạn, người sống theo cảm xúc và lý tưởng hóa tình yêu",
-    "Queen of Cups": "sự thấu cảm sâu sắc, lòng trắc ẩn và khả năng chữa lành vết thương lòng",
-    "King of Cups": "khả năng kiểm soát cảm xúc tuyệt vời, sự trưởng thành và bao dung",
-
-    # SWORDS (Kiếm - Khí - Tư duy)
-    "Ace of Swords": "một sự thật được phơi bày, trí tuệ sắc bén và quyết định lý trí dứt khoát",
-    "Two of Swords": "sự bế tắc, do dự không dám nhìn thẳng vào sự thật, che giấu cảm xúc",
-    "Three of Swords": "nỗi đau lòng, sự tổn thương sâu sắc do lời nói hoặc sự chia cắt",
-    "Four of Swords": "thời gian cần thiết để nghỉ ngơi, hồi phục và tĩnh lặng sau bão tố",
-    "Five of Swords": "một chiến thắng rỗng tuếch, sự mâu thuẫn và cái tôi quá lớn gây tổn thương",
-    "Six of Swords": "sự rời bỏ những rắc rối để chuyển đến một nơi bình yên hơn, sự chữa lành chậm rãi",
-    "Seven of Swords": "sự lén lút, chiến thuật không trung thực hoặc cố gắng trốn tránh trách nhiệm",
-    "Eight of Swords": "cảm giác bị trói buộc, bế tắc do chính suy nghĩ tiêu cực của bản thân tạo ra",
-    "Nine of Swords": "nỗi lo âu, mất ngủ, ác mộng và sự căng thẳng tột độ về tinh thần",
-    "Ten of Swords": "sự kết thúc đau đớn nhưng dứt khoát, chạm đáy để bắt đầu đi lên",
-    "Page of Swords": "sự tò mò, quan sát sắc bén, nhưng đôi khi là tin tức thị phi",
-    "Knight of Swords": "hành động vội vã, lời nói thẳng thắn đến mức gây sát thương",
-    "Queen of Swords": "sự sắc sảo, độc lập, phán xét công bằng và không để cảm xúc chi phối",
-    "King of Swords": "quyền lực của trí tuệ, sự công minh, nghiêm khắc và tư duy logic",
-
-    # PENTACLES (Tiền - Đất - Vật chất)
-    "Ace of Pentacles": "cơ hội tài chính mới, sự khởi đầu thịnh vượng và nền tảng vững chắc",
-    "Two of Pentacles": "sự cân bằng giữa các yếu tố, khả năng xoay sở linh hoạt trong khó khăn",
-    "Three of Pentacles": "sự hợp tác làm việc nhóm, kỹ năng chuyên môn được công nhận",
-    "Four of Pentacles": "sự giữ của, kiểm soát tài chính chặt chẽ, đôi khi là keo kiệt",
-    "Five of Pentacles": "sự thiếu thốn vật chất, cảm giác bị bỏ rơi hoặc khó khăn tạm thời",
-    "Six of Pentacles": "sự cho và nhận, lòng hào phóng hoặc sự cân bằng trong tài chính",
-    "Seven of Pentacles": "sự kiên nhẫn chờ đợi thu hoạch, đánh giá lại quá trình đầu tư",
-    "Eight of Pentacles": "sự chăm chỉ, tỉ mỉ rèn luyện kỹ năng, làm việc cật lực",
-    "Nine of Pentacles": "sự độc lập tài chính, tận hưởng thành quả lao động, sự sang trọng",
-    "Ten of Pentacles": "sự giàu có bền vững, di sản gia đình và sự sung túc trọn vẹn",
-    "Page of Pentacles": "ham học hỏi kiến thức mới, tin tức tốt về tiền bạc, sự thực tế",
-    "Knight of Pentacles": "sự cần cù, đáng tin cậy, làm việc chậm nhưng chắc chắn",
-    "Queen of Pentacles": "sự chăm sóc, quản lý tài chính tài tình, người phụ nữ thực tế",
-    "King of Pentacles": "đỉnh cao của thành công vật chất, doanh nhân thành đạt, sự giàu có"
+# Dữ liệu Minor Arcana (56 lá) - Format: (Tên, Ý nghĩa Xuôi, Ý nghĩa Ngược, Lời khuyên)
+MINORS_FULL = {
+    "Wands": ("Lửa - Hành động", {
+        "Ace": ("khởi đầu đầy nhiệt huyết", "mất động lực, trì hoãn", "hãy nắm bắt ngọn lửa đam mê ngay khi nó bùng lên"),
+        "Two": ("lập kế hoạch tương lai", "sợ hãi không dám bước ra vùng an toàn", "tầm nhìn xa sẽ quyết định thành công của bạn"),
+        "Three": ("mở rộng và chờ đợi kết quả", "gặp trở ngại ban đầu, thất vọng", "hãy kiên nhẫn, tàu của bạn đang về bến"),
+        "Four": ("ăn mừng, ổn định và hạnh phúc", "mâu thuẫn gia đình, cảm giác không thuộc về", "hãy trân trọng những gì đang có"),
+        "Five": ("cạnh tranh, mâu thuẫn rèn giũa", "xung đột gay gắt, né tránh mâu thuẫn", "cạnh tranh công bằng sẽ giúp bạn giỏi hơn"),
+        "Six": ("chiến thắng, vinh quang", "kiêu ngạo, thất bại hoặc bị lãng quên", "hãy khiêm tốn khi ở trên đỉnh cao"),
+        "Seven": ("phòng thủ, bảo vệ lập trường", "bị áp đảo, bỏ cuộc sớm", "đứng vững và bảo vệ niềm tin của mình"),
+        "Eight": ("tốc độ, tin tức nhanh chóng", "trì hoãn, vội vàng hấp tấp", "hành động ngay nhưng đừng thiếu suy nghĩ"),
+        "Nine": ("kiên trì, đề phòng phút chót", "kiệt sức, muốn bỏ cuộc", "chỉ còn một chút nữa thôi, đừng bỏ cuộc"),
+        "Ten": ("gánh nặng, quá tải trách nhiệm", "buông bỏ bớt gánh nặng, sụp đổ", "hãy san sẻ công việc, đừng ôm đồm tất cả"),
+        "Page": ("tin tức mới, sự tò mò khám phá", "tin xấu, thiếu nhiệt huyết", "hãy giữ tâm thế của người mới bắt đầu"),
+        "Knight": ("hành động bốc đồng, phiêu lưu", "hung hăng, thiếu kiên nhẫn", "hãy dồn năng lượng vào mục tiêu cụ thể"),
+        "Queen": ("tự tin, quyến rũ, ấm áp", "ghen tuông, hống hách", "hãy tỏa sáng bằng sự tự tin của chính mình"),
+        "King": ("lãnh đạo, tầm nhìn xa", "độc đoán, đặt kỳ vọng quá cao", "hãy dẫn dắt bằng tầm nhìn, không phải bằng quyền lực")
+    }),
+    "Cups": ("Nước - Cảm xúc", {
+        "Ace": ("tình cảm mới chớm nở", "cảm xúc bị kìm nén, buồn bã", "hãy mở lòng để đón nhận yêu thương"),
+        "Two": ("kết nối đôi lứa, hòa hợp", "chia rẽ, mất kết nối", "sự đồng điệu là chìa khóa của mối quan hệ"),
+        "Three": ("tụ tập, vui vẻ với bạn bè", "chuyện ngồi lê đôi mách, tiệc tàn", "hãy tận hưởng niềm vui cùng cộng đồng"),
+        "Four": ("chán nản, thờ ơ cơ hội", "bỏ lỡ cơ hội, thức tỉnh", "đừng mải nhìn vào cái ly rỗng mà quên cái ly đầy"),
+        "Five": ("tiếc nuối quá khứ, mất mát", "chấp nhận mất mát, chữa lành", "đừng khóc vì những gì đã mất, hãy nhìn những gì còn lại"),
+        "Six": ("hoài niệm, người cũ, kỷ niệm", "dính mắc quá khứ, không sống thực tại", "quá khứ là kỷ niệm đẹp, không phải nơi để sống"),
+        "Seven": ("ảo tưởng, quá nhiều lựa chọn", "vỡ mộng, nhìn ra sự thật", "hãy chọn một mục tiêu thực tế và theo đuổi nó"),
+        "Eight": ("bỏ lại tất cả để tìm ý nghĩa", "sợ thay đổi, đi lang thang", "đôi khi phải buông bỏ cái tốt để tìm cái vĩ đại"),
+        "Nine": ("ước mơ thành hiện thực, thỏa mãn", "tham lam, chưa hài lòng", "hạnh phúc là biết đủ"),
+        "Ten": ("viên mãn, gia đình hạnh phúc", "xung đột gia đình, tan vỡ", "gia đình là nơi bão dừng sau cánh cửa"),
+        "Page": ("tin nhắn tình cảm, mơ mộng", "nhạy cảm thái quá, tin buồn", "hãy lắng nghe trực giác mách bảo"),
+        "Knight": ("lãng mạn, lời đề nghị tình yêu", "ảo tưởng, lừa dối tình cảm", "hãy lãng mạn nhưng đừng xa rời thực tế"),
+        "Queen": ("thấu cảm, chữa lành, dịu dàng", "phụ thuộc cảm xúc, u uất", "hãy dùng lòng trắc ẩn để hóa giải hận thù"),
+        "King": ("kiểm soát cảm xúc, trưởng thành", "lạnh lùng, thao túng cảm xúc", "cân bằng giữa trái tim và lý trí")
+    }),
+    "Swords": ("Khí - Tư duy", {
+        "Ace": ("sự thật, trí tuệ sắc bén", "rối trí, sự thật gây đau lòng", "sự thật dù đau lòng vẫn tốt hơn lời nói dối"),
+        "Two": ("bế tắc, do dự, che giấu", "nhìn ra sự thật, đưa ra quyết định", "đừng trốn tránh, hãy đối mặt để giải quyết"),
+        "Three": ("đau lòng, tổn thương sâu sắc", "chữa lành, buông bỏ nỗi đau", "nỗi đau là cần thiết để trưởng thành"),
+        "Four": ("nghỉ ngơi, hồi phục, tĩnh lặng", "kiệt sức, không chịu nghỉ ngơi", "hãy cho tâm trí một khoảng lặng"),
+        "Five": ("chiến thắng rỗng tuếch, mâu thuẫn", "giải quyết mâu thuẫn, hối hận", "đừng thắng cuộc tranh luận mà thua một mối quan hệ"),
+        "Six": ("rời bỏ rắc rối, bình yên", "khó khăn khi thay đổi, mang theo hành lý cảm xúc", "hãy để lại nỗi buồn ở bến bờ cũ"),
+        "Seven": ("lén lút, chiến thuật, trốn tránh", "bị phát hiện, thú nhận", "sự trung thực là chính sách tốt nhất"),
+        "Eight": ("tự trói buộc, bế tắc tâm lý", "giải thoát, tìm ra lối thoát", "nhà tù lớn nhất là suy nghĩ của chính bạn"),
+        "Nine": ("lo âu, mất ngủ, ác mộng", "giải tỏa lo âu, đối mặt sợ hãi", "nỗi sợ chỉ là cái bóng của trí tưởng tượng"),
+        "Ten": ("kết thúc đau đớn, chạm đáy", "hồi phục, bắt đầu lại", "khi chạm đáy, lối đi duy nhất là đi lên"),
+        "Page": ("tò mò, quan sát, tin tức", "thị phi, soi mói, nói xấu", "hãy dùng trí tuệ để quan sát, đừng phán xét"),
+        "Knight": ("hành động vội vã, thẳng thắn", "hung hăng, lời nói sát thương", "uốn lưỡi bảy lần trước khi nói"),
+        "Queen": ("sắc sảo, độc lập, công bằng", "cay nghiệt, lạnh lùng, cô độc", "hãy dùng trí tuệ để bảo vệ, đừng để tấn công"),
+        "King": ("quyền lực trí tuệ, nghiêm khắc", "độc tài, lạm dụng quyền lực", "sử dụng logic và công lý để dẫn dắt")
+    }),
+    "Pentacles": ("Đất - Tiền bạc", {
+        "Ace": ("cơ hội tài chính mới, thịnh vượng", "bỏ lỡ cơ hội, tham lam", "hãy gieo hạt giống thịnh vượng ngay hôm nay"),
+        "Two": ("cân bằng, linh hoạt xoay sở", "mất cân bằng, rối ren tài chính", "hãy giữ thăng bằng giữa các khía cạnh cuộc sống"),
+        "Three": ("hợp tác, làm việc nhóm, chuyên môn", "thiếu hợp tác, làm việc cẩu thả", "muốn đi xa hãy đi cùng nhau"),
+        "Four": ("giữ của, ổn định, an toàn", "keo kiệt, sợ mất mát", "tiền bạc cần lưu thông mới sinh sôi"),
+        "Five": ("thiếu thốn, khó khăn, bị bỏ rơi", "hồi phục tài chính, tìm thấy hy vọng", "đừng ngại nhờ giúp đỡ khi sa cơ lỡ vận"),
+        "Six": ("cho và nhận, hào phóng", "lợi dụng, nợ nần", "cho đi là còn mãi"),
+        "Seven": ("kiên nhẫn chờ đợi, đánh giá đầu tư", "thiếu kiên nhẫn, đầu tư thất bại", "kiên nhẫn là chìa khóa của thành công"),
+        "Eight": ("chăm chỉ, rèn luyện kỹ năng", "lười biếng, thiếu tập trung", "thành công đến từ sự nỗ lực không ngừng"),
+        "Nine": ("độc lập tài chính, tận hưởng", "phụ thuộc, khoe khoang", "hãy tự hào về những gì mình làm ra"),
+        "Ten": ("giàu có bền vững, di sản", "tranh chấp tài sản, gia đình lục đục", "sự thịnh vượng thực sự bao gồm cả hạnh phúc gia đình"),
+        "Page": ("học hỏi, tin tốt về tiền", "thiếu thực tế, lãng phí", "hãy bắt đầu học cách quản lý tài chính"),
+        "Knight": ("cần cù, đáng tin, chậm mà chắc", "trì trệ, cứng nhắc", "chậm mà chắc còn hơn nhanh mà ẩu"),
+        "Queen": ("thực tế, chăm sóc, quản lý giỏi", "thực dụng, bỏ bê bản thân", "hãy chăm sóc bản thân như chăm sóc khu vườn của bạn"),
+        "King": ("đỉnh cao thành công vật chất", "tham lam, chỉ biết đến tiền", "hãy dùng tiền để tạo ra giá trị cho cộng đồng")
+    })
 }
 
 SPREADS_TAROT = {
@@ -139,67 +143,67 @@ SPREADS_TAROT = {
     "5": {"name": "5 Lá (Chi tiết)", "count": 5, "pos": ["Vấn đề hiện tại", "Thách thức", "Gốc rễ vấn đề", "Lời khuyên", "Kết quả tiềm năng"]}
 }
 
-# --- DỮ LIỆU BÀI TÂY 52 LÁ (VĂN PHONG STORYTELLING) ---
-PLAYING_CARDS_DATA = {
-    "Hearts": { # Cơ
-        "A": "một tình yêu mới chớm nở hoặc niềm hạnh phúc gia đình ấm áp",
-        "K": "một người đàn ông giàu tình cảm, chân thành và tốt bụng",
-        "Q": "một người phụ nữ dịu dàng, thấu hiểu và đáng tin cậy",
-        "J": "những tin tức vui vẻ về tình cảm hoặc một người trẻ tuổi lãng mạn",
-        "10": "hạnh phúc viên mãn, sự trọn vẹn trong mối quan hệ (có thể là hỷ sự)",
-        "9": "điều ước của bạn đang dần trở thành hiện thực",
-        "8": "những cuộc gặp gỡ, hẹn hò và giao lưu vui vẻ",
-        "7": "cảm giác ghen tuông, bất an hoặc những kỳ vọng quá cao",
-        "6": "người cũ hoặc những kỷ niệm xưa cũ quay trở lại",
-        "5": "một chút nỗi buồn thoáng qua hoặc sự thất vọng trong tình cảm",
-        "4": "sự ổn định, cam kết, nhưng đôi khi hơi thiếu lửa",
-        "3": "sự phân vân giữa các lựa chọn hoặc có người thứ ba xen vào",
-        "2": "sự kết đôi, sự hòa hợp tuyệt vời giữa hai tâm hồn"
+# --- B. BÀI TÂY 52 LÁ (CẤU TRÚC: CORE, SHADOW, ADVICE) ---
+PLAYING_CARDS_FULL = {
+    "Hearts": { # CƠ - CẢM XÚC
+        "A": {"core": "một khởi đầu mới đầy ắp tình cảm", "shadow": "thực ra có thể bạn đang quá khao khát yêu thương nên dễ ngộ nhận", "advice": "hãy mở lòng nhưng đừng vội vàng trao hết"},
+        "2": {"core": "sự kết nối sâu sắc giữa hai tâm hồn", "shadow": "nhưng cẩn thận kẻo bạn đang phụ thuộc cảm xúc vào người kia quá nhiều", "advice": "yêu thương cần đi kèm sự tự chủ"},
+        "3": {"core": "sự phân vân hoặc người thứ 3", "shadow": "thực tế là chính bạn đang không rõ mình muốn gì, hoặc đang đứng núi này trông núi nọ", "advice": "hãy thành thật với cảm xúc của mình trước"},
+        "4": {"core": "sự ổn định, cam kết", "shadow": "đôi khi nó lại là sự tẻ nhạt, bạn đang duy trì nó vì thói quen hơn là vì rung động", "advice": "hãy hâm nóng lại cảm xúc hoặc tìm niềm vui mới"},
+        "5": {"core": "nỗi buồn, sự hụt hẫng", "shadow": "tao nghĩ không hẳn là ai làm mày buồn, mà là mày đang tiếc nuối những chuyện cũ chưa buông bỏ được", "advice": "đừng để quá khứ ám ảnh hiện tại nữa"},
+        "6": {"core": "người cũ, kỷ niệm cũ", "shadow": "có vẻ như bạn đang lý tưởng hóa quá khứ và so sánh nó với hiện tại", "advice": "quá khứ chỉ nên là kỷ niệm, đừng để nó là rào cản"},
+        "7": {"core": "ghen tuông, ảo tưởng", "shadow": "thực ra là bạn đang tự ti, sợ mình không đủ tốt nên mới sinh nghi ngờ", "advice": "nâng cao giá trị bản thân thay vì kiểm soát người khác"},
+        "8": {"core": "gặp gỡ, giao lưu vui vẻ", "shadow": "nhưng coi chừng chỉ là những mối quan hệ xã giao hời hợt, vui đấy nhưng xong rồi thôi", "advice": "hãy tìm kiếm những kết nối chất lượng hơn"},
+        "9": {"core": "ước nguyện thành hiện thực", "shadow": "nhưng coi chừng 'cầu được ước thấy' rồi lại nhận ra đó không phải thứ mình thực sự cần", "advice": "hãy cẩn trọng với những gì mình mong cầu"},
+        "10": {"core": "hạnh phúc viên mãn", "shadow": "có thể bạn đang cố diễn vai hạnh phúc để che đậy những vết nứt nhỏ bên trong", "advice": "hạnh phúc thật sự đến từ sự bình yên, không phải sự hoàn hảo"},
+        "J": {"core": "người trẻ tuổi, tin vui", "shadow": "một cảm xúc bồng bột, đến nhanh nhưng cũng dễ đi nhanh", "advice": "hãy tận hưởng khoảnh khắc nhưng đừng kỳ vọng quá xa"},
+        "Q": {"core": "người phụ nữ dịu dàng", "shadow": "có thể bạn đang quá đa sầu đa cảm, chuyện bé xé ra to", "advice": "hãy dùng trực giác nhưng đừng quên lý trí"},
+        "K": {"core": "người đàn ông chân thành", "shadow": "đôi khi sự tốt bụng này lại thiếu đi sự quyết đoán cần thiết", "advice": "cần mạnh mẽ bảo vệ cảm xúc của mình hơn"}
     },
-    "Diamonds": { # Rô
-        "A": "một cơ hội tài chính mới hoặc tin tức giấy tờ quan trọng",
-        "K": "người đàn ông thành đạt, có quyền lực về tài chính",
-        "Q": "người phụ nữ sắc sảo, quản lý chi tiêu rất giỏi",
-        "J": "tin tức về tiền bạc, lợi nhuận hoặc công việc mới",
-        "10": "sự thịnh vượng, dòng tiền lớn hoặc thành công rực rỡ",
-        "9": "sự tự chủ tài chính, thoải mái chi tiêu không lo nghĩ",
-        "8": "quá trình nỗ lực học hỏi, rèn luyện kỹ năng kiếm tiền",
-        "7": "cảnh báo rủi ro đầu tư hoặc những tin đồn thất thiệt",
-        "6": "sự giúp đỡ về vật chất, vay mượn hoặc làm từ thiện",
-        "5": "những khoản chi tiêu ngoài ý muốn hoặc khó khăn tạm thời",
-        "4": "sự tiết kiệm, giữ chặt tài sản, ưu tiên an toàn",
-        "3": "sự hợp tác làm ăn, đầu tư chung vốn sinh lời",
-        "2": "việc ký kết hợp đồng, trao đổi mua bán thuận lợi"
+    "Diamonds": { # RÔ - VẬT CHẤT
+        "A": {"core": "tin tức về tiền bạc, giấy tờ", "shadow": "nhưng cẩn thận, cơ hội này có thể đi kèm những ràng buộc pháp lý rắc rối", "advice": "đọc kỹ mọi thứ trước khi gật đầu"},
+        "2": {"core": "hợp đồng, trao đổi", "shadow": "có vẻ như bạn đang tính toán quá chi li, khiến mối quan hệ trở nên thực dụng", "advice": "đôi khi sòng phẳng quá lại mất tình cảm"},
+        "3": {"core": "hợp tác làm ăn", "shadow": "nhưng coi chừng 'lắm thầy nhiều ma', chưa chắc hợp tác đã tốt hơn làm một mình", "advice": "chọn đối tác thật kỹ"},
+        "4": {"core": "tiết kiệm, giữ tiền", "shadow": "thực ra là bạn đang sợ thiếu thốn, nỗi sợ này khiến bạn không dám đầu tư cho bản thân", "advice": "tiền cần được lưu thông mới sinh lời"},
+        "5": {"core": "mất mát, khó khăn", "shadow": "vấn đề không phải là mất bao nhiêu tiền, mà là bạn đang cảm thấy giá trị bản thân bị sụt giảm", "advice": "bạn đáng giá hơn số dư tài khoản của bạn"},
+        "6": {"core": "sự giúp đỡ, từ thiện", "shadow": "coi chừng bạn đang ban phát sự giúp đỡ để đổi lấy sự công nhận", "advice": "giúp người là tốt, nhưng đừng để bị lợi dụng"},
+        "7": {"core": "rủi ro, tin đồn", "shadow": "bạn đang lo lắng thái quá về những thứ chưa xảy ra", "advice": "tập trung vào thực tế, bỏ qua tin đồn"},
+        "8": {"core": "học hỏi, rèn luyện", "shadow": "bạn đang làm việc rất chăm chỉ nhưng có vẻ hơi thụ động, thiếu sự đột phá", "advice": "cần làm việc thông minh hơn là chỉ làm việc chăm chỉ"},
+        "9": {"core": "tự chủ tài chính", "shadow": "bạn có tiền nhưng lại thấy cô đơn, không biết chia sẻ cùng ai", "advice": "tiền bạc là phương tiện, không phải mục đích sống"},
+        "10": {"core": "đại phú, thành công lớn", "shadow": "áp lực phải duy trì sự thành công này đang đè nặng lên vai bạn", "advice": "hãy học cách hưởng thụ thành quả"},
+        "J": {"core": "tin tức lợi nhuận", "shadow": "một khoản lợi nhỏ có thể làm bạn mờ mắt trước rủi ro lớn", "advice": "đừng tham bát bỏ mâm"},
+        "Q": {"core": "người quản lý giỏi", "shadow": "bạn đang quá khắt khe với bản thân và người khác trong chuyện tiền nong", "advice": "hãy rộng lượng hơn một chút"},
+        "K": {"core": "quyền lực tài chính", "shadow": "bạn đang dùng tiền để kiểm soát mọi thứ, kể cả tình cảm", "advice": "có những thứ tiền không mua được"}
     },
-    "Clubs": { # Tép
-        "A": "sự khởi đầu của một dự án, công việc hoặc ý tưởng mới",
-        "K": "người sếp, lãnh đạo có tầm nhìn và chuyên môn cao",
-        "Q": "người phụ nữ thông minh, khéo léo trong giao tiếp công việc",
-        "J": "sự nhiệt huyết của tuổi trẻ, nhân viên mới hoặc người học việc",
-        "10": "thành công lớn trong sự nghiệp, thăng chức hoặc đạt mục tiêu",
-        "9": "tham vọng lớn lao nhưng đi kèm áp lực công việc nặng nề",
-        "8": "tin tức đến rất nhanh, những chuyến đi công tác, di chuyển",
-        "7": "những cuộc tranh luận, mâu thuẫn quan điểm với đồng nghiệp",
-        "6": "cơ hội phát triển, sự ghi nhận công sức xứng đáng",
-        "5": "sự thay đổi môi trường làm việc hoặc thử thách mới cần vượt qua",
-        "4": "nền tảng sự nghiệp vững chắc, sự ổn định lâu dài",
-        "3": "giai đoạn cân nhắc, đứng trước nhiều ngã rẽ sự nghiệp",
-        "2": "sự hỗ trợ đắc lực từ đối tác, làm việc nhóm hiệu quả"
+    "Clubs": { # TÉP - CÔNG VIỆC
+        "A": {"core": "khởi đầu dự án mới", "shadow": "bạn hào hứng đấy, nhưng coi chừng 'cả thèm chóng chán'", "advice": "giữ vững ngọn lửa nhiệt huyết đường dài"},
+        "2": {"core": "sự hỗ trợ", "shadow": "bạn đang dựa dẫm quá nhiều vào người khác mà quên mất năng lực tự thân", "advice": "hãy tự đứng trên đôi chân mình"},
+        "3": {"core": "cân nhắc lựa chọn", "shadow": "thực ra bạn đã có câu trả lời rồi, chỉ là bạn sợ phải chịu trách nhiệm thôi", "advice": "quyết đoán lên, sai thì sửa"},
+        "4": {"core": "nền tảng vững chắc", "shadow": "bạn đang ở trong vùng an toàn quá lâu, điều này kìm hãm sự phát triển", "advice": "đã đến lúc bước ra khỏi vỏ bọc"},
+        "5": {"core": "thay đổi, thử thách", "shadow": "bạn đang chống lại sự thay đổi, chính sự kháng cự này làm bạn mệt mỏi", "advice": "thả lỏng và nương theo dòng chảy"},
+        "6": {"core": "bước tiến, thành công", "shadow": "bạn đang ngủ quên trên chiến thắng và chủ quan", "advice": "khiêm tốn và tiếp tục nỗ lực"},
+        "7": {"core": "tranh luận, mâu thuẫn", "shadow": "bạn đang cố chứng minh mình đúng hơn là tìm ra giải pháp chung", "advice": "lắng nghe cũng là một kỹ năng lãnh đạo"},
+        "8": {"core": "bận rộn, di chuyển", "shadow": "bạn đang lao đi quá nhanh mà quên mất mục đích ban đầu là gì", "advice": "sống chậm lại một nhịp"},
+        "9": {"core": "tham vọng, áp lực", "shadow": "bạn đang gồng gánh quá sức, ôm đồm việc của người khác", "advice": "hãy học cách từ chối và chia sẻ công việc"},
+        "10": {"core": "đỉnh cao sự nghiệp", "shadow": "bạn đã đạt được mục tiêu nhưng lại thấy trống rỗng", "advice": "hãy tìm kiếm ý nghĩa mới cho công việc"},
+        "J": {"core": "nhiệt huyết tuổi trẻ", "shadow": "sự thiếu kinh nghiệm có thể khiến bạn mắc sai lầm ngớ ngẩn", "advice": "hãy lắng nghe lời khuyên của người đi trước"},
+        "Q": {"core": "giao tiếp khéo léo", "shadow": "bạn đang thảo mai hoặc thiếu chân thành trong công việc", "advice": "sự chân thật sẽ mang lại giá trị bền vững"},
+        "K": {"core": "lãnh đạo quyền lực", "shadow": "bạn đang trở nên độc đoán và không chịu nghe ai", "advice": "lãnh đạo là phục vụ, không phải cai trị"}
     },
-    "Spades": { # Bích
-        "A": "một sự kết thúc dứt khoát để bắt đầu lại (hoặc vấn đề giấy tờ pháp lý)",
-        "K": "người đàn ông nghiêm khắc, lạnh lùng, giải quyết bằng lý trí",
-        "Q": "người phụ nữ sắc sảo nhưng cô độc, đa nghi",
-        "J": "kẻ tiểu nhân, tin tức không vui hoặc sự dối trá",
-        "10": "gánh nặng tâm lý, áp lực tột độ hoặc chuyện xui rủi",
-        "9": "nỗi lo âu, mất ngủ, căng thẳng kéo dài",
-        "8": "những trở ngại bất ngờ, cảm giác bị bế tắc",
-        "7": "sự phản bội, đâm sau lưng hoặc lừa gạt",
-        "6": "sự rời bỏ, trốn tránh hoặc đi xa để tìm bình yên",
-        "5": "sự thất bại, mất mát hoặc đổ vỡ một kế hoạch",
-        "4": "sự trì hoãn, mệt mỏi về thể chất cần nghỉ ngơi",
-        "3": "sự chia ly, đau lòng hoặc những rạn nứt tình cảm",
-        "2": "mâu thuẫn trực diện, cãi vã căng thẳng"
+    "Spades": { # BÍCH - TÂM LÝ
+        "A": {"core": "kết thúc để bắt đầu", "shadow": "bạn đang cố níu kéo những thứ đã chết, điều đó chỉ làm bạn thêm đau", "advice": "dũng cảm cắt bỏ những gì không còn phục vụ bạn"},
+        "2": {"core": "mâu thuẫn, cãi vã", "shadow": "bạn đang đấu tranh với chính mình nhiều hơn là với người khác", "advice": "hòa giải nội tâm trước"},
+        "3": {"core": "chia ly, rạn nứt", "shadow": "nỗi đau này đến để dạy bạn cách yêu thương bản thân mình hơn", "advice": "cho phép mình được buồn, nhưng đừng chìm đắm"},
+        "4": {"core": "mệt mỏi, trì hoãn", "shadow": "cơ thể bạn đang biểu tình, bạn đã bỏ bê nó quá lâu", "advice": "nghỉ ngơi là một phần của công việc"},
+        "5": {"core": "thất bại, mất mát", "shadow": "bạn đang đóng vai nạn nhân và đổ lỗi cho hoàn cảnh", "advice": "chấp nhận thất bại là bước đầu của thành công"},
+        "6": {"core": "rời bỏ, đi xa", "shadow": "bạn đang trốn chạy vấn đề chứ không phải giải quyết nó", "advice": "đi đâu cũng được, miễn là tâm an"},
+        "7": {"core": "phản bội, lừa dối", "shadow": "bạn đã bỏ qua những lá cờ đỏ (red flags) từ đầu vì muốn tin vào điều tốt đẹp", "advice": "tin vào trực giác của mình"},
+        "8": {"core": "bế tắc, trở ngại", "shadow": "rào cản lớn nhất chính là suy nghĩ tiêu cực của bạn", "advice": "thay đổi góc nhìn, lối thoát sẽ mở ra"},
+        "9": {"core": "lo âu, mất ngủ", "shadow": "bạn đang lo lắng về những thứ chưa xảy ra và có thể không bao giờ xảy ra", "advice": "sống cho hiện tại thôi"},
+        "10": {"core": "gánh nặng, xui xẻo", "shadow": "mọi thứ dường như sụp đổ, nhưng đây là lúc bóng tối dày đặc nhất trước bình minh", "advice": "kiên cường lên, mọi chuyện rồi sẽ qua"},
+        "J": {"core": "tiểu nhân, tin xấu", "shadow": "bạn đang thu hút những năng lượng tiêu cực này bằng sự sợ hãi của mình", "advice": "thanh lọc môi trường sống và tâm trí"},
+        "Q": {"core": "sắc sảo, cô độc", "shadow": "bạn dựng lên bức tường băng giá để bảo vệ mình nhưng lại tự nhốt mình trong đó", "advice": "mở lòng ra, bạn xứng đáng được yêu thương"},
+        "K": {"core": "lý trí, nghiêm khắc", "shadow": "bạn đang quá cứng nhắc và thiếu đi sự bao dung", "advice": "đôi khi cần xử lý bằng tình cảm hơn là lý lẽ"}
     }
 }
 
@@ -242,16 +246,18 @@ def search_image_url(query):
             return res[0]['image'] if res else None
     except: return None
 
-# ================= 4. ENGINE TAROT (VĂN PHONG CHỮA LÀNH) =================
+# ================= 4. ENGINE TAROT (FULL 78 LÁ - STORYTELLING) =================
 
 def generate_tarot_deck():
     deck = []
     # Major Arcana
-    for i, (n, m) in MAJORS.items():
-        deck.append({"name": f"{n} (Major)", "meaning": m, "type": "Major"})
-    # Minor Arcana (Dữ liệu chi tiết 56 lá)
-    for name, meaning in MINORS.items():
-        deck.append({"name": name, "meaning": meaning, "type": "Minor"})
+    for i, (name, meaning_up, meaning_rev, advice) in MAJORS_DATA.items():
+        deck.append({"name": f"{name} (Ẩn Chính)", "meaning_up": meaning_up, "meaning_rev": meaning_rev, "advice": advice, "type": "Major"})
+    
+    # Minor Arcana
+    for suit, (desc, ranks) in MINORS_FULL.items():
+        for r_name, (up, rev, adv) in ranks.items():
+            deck.append({"name": f"{r_name} of {suit}", "meaning_up": up, "meaning_rev": rev, "advice": adv, "type": "Minor"})
     return deck
 
 def execute_tarot_reading(ctx):
@@ -259,6 +265,8 @@ def execute_tarot_reading(ctx):
     random.shuffle(deck)
     spread = SPREADS_TAROT.get(ctx.get("spread_id", "3"), SPREADS_TAROT["3"])
     drawn = []
+    
+    # Bốc bài
     for i in range(spread["count"]):
         if not deck: break
         c = deck.pop()
@@ -266,76 +274,62 @@ def execute_tarot_reading(ctx):
         c["orientation"] = random.choice(["Xuôi", "Ngược"])
         drawn.append(c)
 
-    # Viết văn
+    # Viết văn (Văn phong chữa lành)
     msg = f"🔮 **KẾT QUẢ TAROT: {ctx.get('topic').upper()}**\n"
     msg += f"👤 Querent: {ctx.get('info', 'Ẩn danh')}\n➖➖➖➖➖➖\n\n"
-    msg += "🍃 **DIỄN GIẢI CHI TIẾT:**\n\n"
+    msg += "🍃 **HÀNH TRÌNH CỦA BẠN:**\n\n"
     
     for i, c in enumerate(drawn):
-        prefix = ["Mở đầu,", "Tiếp theo,", "Sau đó,", "Cuối cùng,"][min(i, 3)]
-        status = f" ({c['orientation']})"
-        msg += f"🔸 **{c['pos']}**: {c['name']}{status}\n"
-        msg += f"{prefix} lá bài này mang đến thông điệp về {c['meaning']}. "
-        if c['orientation'] == "Ngược":
-            msg += "Tuy nhiên, ở chiều ngược, năng lượng này đang bị tắc nghẽn hoặc cần bạn nhìn nhận lại từ bên trong.\n\n"
+        prefix = ["Mở đầu,", "Tiếp theo,", "Sau đó,", "Gần kết thúc,"][min(i, 3)]
+        status_icon = "🔺" if c['orientation'] == "Xuôi" else "🔻"
+        
+        msg += f"{status_icon} **{c['pos']}: {c['name']}** ({c['orientation']})\n"
+        
+        if c['orientation'] == "Xuôi":
+            msg += f"{prefix} lá bài này mang đến năng lượng tích cực về {c['meaning_up']}. Đây là tín hiệu để bạn tự tin bước tiếp.\n"
         else:
-            msg += "Đây là một tín hiệu thuận lợi để bạn phát huy.\n\n"
+            msg += f"{prefix} ở chiều ngược, lá bài cảnh báo về {c['meaning_rev']}. Có lẽ bạn cần chậm lại để xem xét kỹ hơn.\n"
             
-    msg += "💡 **LỜI KHUYÊN TỪ VŨ TRỤ:**\n"
-    msg += "Hãy hít thở sâu và đón nhận thông điệp này. Mọi thứ diễn ra đều có lý do của nó, và bạn luôn có quyền năng để kiến tạo tương lai của mình."
+        msg += f"👉 *Lời khuyên nhỏ:* {c['advice']}\n\n"
+            
+    msg += "💡 **THÔNG ĐIỆP TỪ VŨ TRỤ:**\n"
+    msg += "Mọi thứ diễn ra đều có lý do của nó. Hãy tin tưởng vào trực giác của bạn và dũng cảm đối diện với sự thật."
     return msg
 
-# ================= 5. ENGINE BÀI TÂY (VĂN PHONG STORYTELLING & LOGIC CAO CẤP) =================
+# ================= 5. ENGINE BÀI TÂY (CONTEXT-AWARE & STORYTELLING) =================
 
 def generate_playing_deck():
     deck = []
-    suits = {"Hearts": "♥ Cơ", "Diamonds": "♦ Rô", "Clubs": "♣ Tép", "Spades": "♠ Bích"}
-    ranks = {"A":"Át", "2":"Hai", "3":"Ba", "4":"Bốn", "5":"Năm", "6":"Sáu", "7":"Bảy", "8":"Tám", "9":"Chín", "10":"Mười", "J":"Bồi", "Q":"Đầm", "K":"Già"}
-    for s_en, meaning_dict in PLAYING_CARDS_DATA.items():
-        for r, m in meaning_dict.items():
-            deck.append({"name": f"{ranks[r]} {suits[s_en][2:]}", "symbol": f"{r}{suits[s_en][0]}", "suit": s_en, "meaning": m})
+    suits_vn = {"Hearts": "Cơ", "Diamonds": "Rô", "Clubs": "Tép", "Spades": "Bích"}
+    ranks_vn = {"A":"Át", "2":"Hai", "3":"Ba", "4":"Bốn", "5":"Năm", "6":"Sáu", "7":"Bảy", "8":"Tám", "9":"Chín", "10":"Mười", "J":"Bồi", "Q":"Đầm", "K":"Già"}
+    
+    for suit_en, ranks in PLAYING_CARDS_FULL.items():
+        for rank, details in ranks.items():
+            name = f"{ranks_vn[rank]} {suits_vn[suit_en]}"
+            symbol = f"{rank}{'♥' if suit_en=='Hearts' else '♦' if suit_en=='Diamonds' else '♣' if suit_en=='Clubs' else '♠'}"
+            deck.append({
+                "name": name, 
+                "symbol": symbol, 
+                "suit": suit_en, 
+                "core": details["core"], 
+                "shadow": details["shadow"], 
+                "advice": details["advice"]
+            })
     return deck
 
-def analyze_card_context(card, topic, position):
-    """Hàm tạo văn phong phân tích (Storytelling)"""
-    topic = topic.lower()
-    suit = card["suit"]
-    meaning = card["meaning"]
-    
-    analysis = ""
-    
-    # 1. Phân tích lá bài theo ngữ cảnh (Context-Aware)
-    if "tình" in topic:
-        if suit == "Hearts": analysis = f"Lá {card['name']} thuộc nước Cơ, rất vượng về tình cảm. Nó báo hiệu {meaning.lower()}."
-        elif suit == "Diamonds": analysis = f"Lá {card['name']} thuộc nước Rô (Tiền bạc). Điều này cho thấy vấn đề tài chính hoặc thực tế đang tác động mạnh đến chuyện tình cảm. Cụ thể là {meaning.lower()}."
-        elif suit == "Clubs": analysis = f"Lá {card['name']} thuộc nước Tép (Công việc). Có vẻ như sự bận rộn hoặc áp lực công việc đang làm xao nhãng mối quan hệ. ({meaning})."
-        elif suit == "Spades": analysis = f"Lá {card['name']} thuộc nước Bích. Đây là dấu hiệu của thử thách tâm lý hoặc rào cản. {meaning}."
-    
-    elif "tiền" in topic or "công" in topic:
-        if suit == "Diamonds" or suit == "Clubs": analysis = f"Lá {card['name']} rất tốt cho công việc/tiền bạc. Nó mang ý nghĩa về {meaning.lower()}."
-        elif suit == "Hearts": analysis = f"Lá {card['name']} thuộc nước Cơ. Bạn đang để cảm xúc chi phối các quyết định lý trí. {meaning}."
-        elif suit == "Spades": analysis = f"Lá {card['name']} cảnh báo rủi ro hoặc khó khăn. {meaning}."
-        
-    else: # Tổng quan
-        analysis = f"Lá {card['name']} mang thông điệp: {meaning}."
+def get_natural_connector(index, total):
+    starters = ["Đầu tiên thì,", "Mở bài là", "Khởi động với"]
+    middles = ["Tiếp đến,", "Bên cạnh đó,", "Không chỉ vậy,", "Chưa hết đâu,", "Nhìn sang lá tiếp theo,"]
+    enders = ["Cuối cùng,", "Chốt lại thì,", "Kết quả là,"]
+    if index == 0: return random.choice(starters)
+    elif index == total - 1: return random.choice(enders)
+    else: return random.choice(middles)
 
-    # 2. Phân tích theo vị trí (Position-Based)
-    if "Vấn đề" in position:
-        return f"Hiện tại, {analysis.lower().replace('lá ', '')} Đây là nút thắt chính bạn cần gỡ bỏ."
-    elif "Nguyên nhân" in position:
-        return f"Nguyên nhân sâu xa dẫn đến việc này là do {analysis.lower().replace('lá ', '')}"
-    elif "Lời khuyên" in position:
-        return f"Lời khuyên cho bạn lúc này: Hãy lưu ý đến thông điệp của {card['name']}. {analysis}"
-    elif "Kết quả" in position:
-        return f"Nếu đi đúng hướng, kết quả sẽ là: {analysis}"
-    else:
-        return f"Ở khía cạnh '{position}', lá bài chỉ ra rằng: {analysis}"
-
-def execute_playing_reading(user_context):
+def execute_playing_reading(ctx):
     deck = generate_playing_deck()
     random.shuffle(deck)
-    spread = SPREADS_PLAYING.get(user_context.get("spread_id", "5"), SPREADS_PLAYING["5"])
-    topic = user_context.get("topic", "Tổng quan")
+    spread = SPREADS_PLAYING.get(ctx.get("spread_id", "5"), SPREADS_PLAYING["5"])
+    topic = ctx.get("topic", "Tổng quan").lower()
     
     drawn = []
     for i in range(spread["count"]):
@@ -343,36 +337,51 @@ def execute_playing_reading(user_context):
         c = deck.pop()
         c["pos_name"] = spread["pos"][i]
         drawn.append(c)
-        
-    # --- XÂY DỰNG VĂN BẢN TRẢ LỜI ---
-    msg = f"🎭 **KẾT QUẢ BÓI BÀI TÂY**\n"
-    msg += f"👤 Querent: {user_context.get('info', 'Ẩn danh')}\n"
-    msg += f"❓ Vấn đề: **{topic}**\n"
-    msg += f"🔀 Kiểu trải: {spread['name']}\n"
+
+    # --- MỞ BÀI ---
+    msg = f"🎭 **BÓI BÀI TÂY: {ctx.get('topic').upper()}**\n"
+    msg += f"👤 Người hỏi: {ctx.get('info', 'Ẩn danh')}\n"
     msg += "➖➖➖➖➖➖➖➖➖➖\n\n"
-    
-    # 1. Danh sách bài
-    msg += "🃏 **CÁC LÁ BÀI ĐƯỢC BỐC:**\n"
-    for c in drawn: msg += f"• {c['symbol']} – {c['name']}\n"
-    msg += "\n🔍 **LUẬN GIẢI CHI TIẾT:**\n"
-    
-    # 2. Phân tích từng lá (Dùng hàm thông minh)
+    msg += "🃏 **BỘ BÀI ĐÃ BỐC:** " + " - ".join([c['symbol'] for c in drawn]) + "\n\n"
+    msg += "☕ **TRÒ CHUYỆN VÀ LUẬN GIẢI:**\n\n"
+
+    # --- THÂN BÀI (LOGIC KỂ CHUYỆN ĐA CHIỀU) ---
     for i, c in enumerate(drawn):
-        explanation = analyze_card_context(c, topic, c['pos_name'])
-        msg += f"🔹 **Lá {i+1} – {c['symbol']} ({c['pos_name']})**\n{explanation}\n\n"
+        connector = get_natural_connector(i, len(drawn))
         
-    # 3. Tổng kết (Logic đếm chất)
+        # Logic Context-Aware: Điều chỉnh ý nghĩa theo Topic
+        interpretation = ""
+        
+        if "tình" in topic:
+            if c["suit"] == "Diamonds": interpretation = f"Dù hỏi về tình cảm, nhưng lá Rô này ám chỉ **vấn đề tài chính** đang tác động. {c['core']}."
+            elif c["suit"] == "Clubs": interpretation = f"Công việc bận rộn đang làm xao nhãng mối quan hệ. {c['core']}."
+            elif c["suit"] == "Spades": interpretation = f"Thật tiếc khi lá Bích xuất hiện, báo hiệu thử thách tâm lý. {c['core']}."
+            else: interpretation = f"Tín hiệu tốt lành cho tình yêu. {c['core']}."
+            
+        elif "tiền" in topic or "công" in topic:
+            if c["suit"] == "Hearts": interpretation = f"Bạn đang để cảm xúc chi phối công việc. {c['core']}."
+            elif c["suit"] == "Spades": interpretation = f"Cẩn thận rủi ro. {c['core']}."
+            else: interpretation = f"Năng lượng rất tích cực. {c['core']}."
+            
+        else:
+            interpretation = f"{c['core']}."
+
+        msg += f"🔹 **{c['pos_name']}: {c['name']}**\n"
+        msg += f"{connector} với lá bài này, về cơ bản nó nói về **{interpretation}**.\n"
+        msg += f"👉 *Góc nhìn sâu hơn:* {c['shadow']}. "
+        msg += f"Tại vị trí '{c['pos_name']}', lời khuyên là: {c['advice']}.\n\n"
+
+    # --- KẾT BÀI (TỔNG HỢP) ---
     suits_count = {"Hearts": 0, "Diamonds": 0, "Clubs": 0, "Spades": 0}
     for c in drawn: suits_count[c["suit"]] += 1
     dom_suit = max(suits_count, key=suits_count.get)
     
-    msg += "✅ **TỔNG KẾT:**\n"
-    if dom_suit == "Hearts": msg += "Trải bài thiên về tình cảm. Mọi việc sẽ được giải quyết êm đẹp nếu bạn dùng sự chân thành."
-    elif dom_suit == "Diamonds": msg += "Trải bài nặng về vật chất. Hãy thực tế, tính toán lợi ích rõ ràng."
-    elif dom_suit == "Clubs": msg += "Trải bài thiên về hành động. Đừng chần chừ, hãy làm ngay đi."
-    elif dom_suit == "Spades": msg += "Trải bài nhiều thử thách. Hãy cẩn trọng, án binh bất động lúc này."
-    
-    msg += "\n\n💡 **LỜI KHUYÊN:** Đừng quá lo lắng nếu gặp lá xấu. Bài Tây chỉ ra xu hướng, còn bạn nắm quyền quyết định."
+    msg += "✅ **LỜI NHẮN NHỦ CUỐI CÙNG:**\n"
+    if dom_suit == "Hearts": msg += "Cảm xúc đang dẫn lối bạn (nhiều Cơ). Hãy yêu thương nhưng đừng mù quáng."
+    elif dom_suit == "Diamonds": msg += "Thực tế và vật chất đang lên ngôi (nhiều Rô). Hãy tính toán kỹ lưỡng."
+    elif dom_suit == "Clubs": msg += "Hành động là chìa khóa (nhiều Tép). Đừng ngồi yên, hãy làm ngay đi."
+    elif dom_suit == "Spades": msg += "Giai đoạn thử thách (nhiều Bích). Hãy kiên cường, sau cơn mưa trời lại sáng."
+        
     return msg
 
 # ================= 6. QUY TRÌNH HỘI THOẠI =================
@@ -381,7 +390,6 @@ def handle_flow(user_id, text, payload):
     s = tarot_sessions.get(user_id)
     if not s: return
     
-    # Anti-Reset
     if payload and "SPREAD_" in payload:
         sid = payload.replace("SPREAD_", "")
         s["spread_id"] = sid
@@ -435,7 +443,7 @@ def handle_command(user_id, cmd, args):
     elif cmd == "/nhac":
         q = " ".join(args) if args else ""
         link = f"https://www.youtube.com/results?search_query={q.replace(' ', '+')}" if q else "https://www.youtube.com/watch?v=k5mX3NkA7jM"
-        send_text(user_id, f"🎧 **NHẠC HAY:** {link}")
+        send_text(user_id, f"🎧 **TÌM NHẠC:** {link}")
 
     elif cmd == "/time":
         now = datetime.datetime.now(pytz.timezone('Asia/Ho_Chi_Minh'))
