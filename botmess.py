@@ -41,9 +41,8 @@ GAME_CODES = {
     "bloxfruit": ["SUB2GAMERROBOT", "KITGAMING"]
 }
 
-# ================= 3. KHO TÀNG DỮ LIỆU TÂM LINH (FULL) =================
+# ================= 3. KHO TÀNG DỮ LIỆU TÂM LINH (GIỮ NGUYÊN TỪ V14) =================
 
-# --- A. TAROT 78 LÁ (Cấu trúc: Tên, Xuôi, Ngược/Bóng tối, Lời khuyên) ---
 MAJORS_DATA = {
     0: ("The Fool", "sự khởi đầu đầy ngây thơ, tự do và tiềm năng vô hạn", "sự liều lĩnh ngu ngốc, ngây thơ quá mức hoặc rủi ro không đáng có", "hãy dũng cảm bước đi nhưng đừng quên nhìn đường"),
     1: ("The Magician", "năng lực hiện thực hóa, sự tập trung và kỹ năng điêu luyện", "sự thao túng, lừa dối hoặc tài năng bị sử dụng sai mục đích", "bạn có đủ mọi nguồn lực, hãy tin vào khả năng của mình"),
@@ -69,7 +68,6 @@ MAJORS_DATA = {
     21: ("The World", "sự hoàn thành trọn vẹn, viên mãn", "sự dang dở, thiếu một mảnh ghép cuối cùng", "bạn đang ở rất gần đích đến, hãy kiên trì thêm chút nữa")
 }
 
-# Dữ liệu Minor Arcana (56 lá) - Format: (Tên, Ý nghĩa Xuôi, Ý nghĩa Ngược, Lời khuyên)
 MINORS_FULL = {
     "Wands": ("Lửa - Hành động", {
         "Ace": ("khởi đầu đầy nhiệt huyết", "mất động lực, trì hoãn", "hãy nắm bắt ngọn lửa đam mê ngay khi nó bùng lên"),
@@ -143,7 +141,6 @@ SPREADS_TAROT = {
     "5": {"name": "5 Lá (Chi tiết)", "count": 5, "pos": ["Vấn đề hiện tại", "Thách thức", "Gốc rễ vấn đề", "Lời khuyên", "Kết quả tiềm năng"]}
 }
 
-# --- B. BÀI TÂY 52 LÁ (CẤU TRÚC: CORE, SHADOW, ADVICE) ---
 PLAYING_CARDS_FULL = {
     "Hearts": { # CƠ - CẢM XÚC
         "A": {"core": "một khởi đầu mới đầy ắp tình cảm", "shadow": "thực ra có thể bạn đang quá khao khát yêu thương nên dễ ngộ nhận", "advice": "hãy mở lòng nhưng đừng vội vàng trao hết"},
@@ -213,7 +210,7 @@ SPREADS_PLAYING = {
     "7": {"name": "7 Lá (Tình duyên)", "count": 7, "pos": ["Năng lượng của bạn", "Năng lượng đối phương", "Cảm xúc của bạn", "Cảm xúc của họ", "Trở ngại khách quan", "Trở ngại chủ quan", "Kết quả mối quan hệ"]}
 }
 
-# ================= 3. HÀM HỖ TRỢ =================
+# ================= 3. HÀM HỖ TRỢ & CHATBOT VUI NHỘN =================
 
 def send_text(user_id, text):
     try: requests.post(f"https://graph.facebook.com/v17.0/me/messages?access_token={ACCESS_TOKEN}", headers={"Content-Type": "application/json"}, data=json.dumps({"recipient": {"id": user_id}, "message": {"text": text}}))
@@ -245,6 +242,25 @@ def search_image_url(query):
             res = list(ddgs.images(query, max_results=1))
             return res[0]['image'] if res else None
     except: return None
+
+# --- LOGIC CHATBOT HÀI HƯỚC (NEW) ---
+def get_funny_response(text):
+    text = text.lower()
+    if "yêu" in text: return "Yêu đương gì tầm này, lo học đi! 📚"
+    if "buồn" in text: return "Buồn thì đi ngủ, trong mơ cái gì cũng có. 😴"
+    if "chán" in text: return "Chán thì vào /kbb làm ván với tao này! 🥊"
+    if "ngu" in text: return "Gương kia ngự ở trên tường... 🪞"
+    if "alo" in text: return "Alo nghe rõ, dây thép gai đây! 📞"
+    if "hi" in text or "chào" in text: return "Chào cưng, nay rảnh ghé chơi à? 😎"
+    
+    responses = [
+        "Nói gì không hiểu, nhưng mà nghe cuốn đấy! 🤣",
+        "Gõ /help để xem thực đơn, chứ chém gió tốn pin quá.",
+        "Đang bận xào bài, lát nói chuyện sau nhé.",
+        "Hỏi khó thế, đi hỏi Google đi má /gg",
+        "Bot đang chạy bằng cơm, đừng spam tội nghiệp 🍚"
+    ]
+    return random.choice(responses)
 
 # ================= 4. ENGINE TAROT (FULL 78 LÁ - STORYTELLING) =================
 
@@ -450,8 +466,12 @@ def handle_command(user_id, cmd, args):
         send_text(user_id, f"⏰ **GIỜ VN:** {now.strftime('%H:%M:%S')} - {now.strftime('%d/%m/%Y')}")
 
     elif cmd == "/thptqg":
-        days = (datetime.datetime(2026, 6, 25) - datetime.datetime.now()).days
-        send_text(user_id, f"⏳ **THPTQG 2026:** Còn {days} ngày!")
+        # SỬA LỖI TIMEZONE & TÍNH NGÀY CHUẨN
+        tz = pytz.timezone('Asia/Ho_Chi_Minh')
+        now = datetime.datetime.now(tz)
+        target = datetime.datetime(2026, 6, 25, tzinfo=tz) # Ngày thi dự kiến
+        days = (target - now).days
+        send_text(user_id, f"⏳ **ĐẾM NGƯỢC THPTQG 2026:**\n\n🎯 Mục tiêu: 25/06/2026\n📉 Còn lại: **{days} ngày**\n\nLo học đi, thời gian không chờ ai đâu! 📚")
 
     elif cmd == "/hld":
         send_text(user_id, "🎉 **SỰ KIỆN:** Tết Nguyên Đán (29/01), Valentine (14/02).")
@@ -550,7 +570,8 @@ def handle_command(user_id, cmd, args):
         )
         send_text(user_id, menu)
     else:
-        send_text(user_id, "Lệnh không đúng. Gõ /help để xem Menu.")
+        # THAY VÌ BÁO LỖI, GỌI CHATBOT HÀI HƯỚC
+        send_text(user_id, get_funny_response(cmd))
 
 # ================= 8. MAIN HANDLER =================
 
@@ -599,7 +620,9 @@ def webhook_handler():
                         handle_command(sender_id, parts[0], parts[1:])
                     elif text:
                         if text.lower() in ["hi", "menu"]: handle_command(sender_id, "/help", [])
-                        else: send_text(sender_id, "Gõ /help hoặc số 1-16.")
+                        else:
+                            # LOGIC CHATBOT FALLBACK
+                            send_text(sender_id, get_funny_response(text))
 
         return "ok", 200
     except: return "ok", 200
