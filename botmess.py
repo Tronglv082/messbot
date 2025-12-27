@@ -6,7 +6,6 @@ import datetime
 import pytz
 import requests
 import wikipedia
-import time
 from flask import Flask, request
 from duckduckgo_search import DDGS
 
@@ -41,7 +40,7 @@ GAME_CODES = {
     "bloxfruit": ["SUB2GAMERROBOT", "KITGAMING"]
 }
 
-# ================= 3. KHO TÀNG DỮ LIỆU TÂM LINH (GIỮ NGUYÊN TỪ V14) =================
+# ================= 3. KHO TÀNG DỮ LIỆU TÂM LINH (GIỮ NGUYÊN V14) =================
 
 MAJORS_DATA = {
     0: ("The Fool", "sự khởi đầu đầy ngây thơ, tự do và tiềm năng vô hạn", "sự liều lĩnh ngu ngốc, ngây thơ quá mức hoặc rủi ro không đáng có", "hãy dũng cảm bước đi nhưng đừng quên nhìn đường"),
@@ -210,7 +209,7 @@ SPREADS_PLAYING = {
     "7": {"name": "7 Lá (Tình duyên)", "count": 7, "pos": ["Năng lượng của bạn", "Năng lượng đối phương", "Cảm xúc của bạn", "Cảm xúc của họ", "Trở ngại khách quan", "Trở ngại chủ quan", "Kết quả mối quan hệ"]}
 }
 
-# ================= 3. HÀM HỖ TRỢ & CHATBOT VUI NHỘN =================
+# ================= 3. HÀM HỖ TRỢ & CHATBOT VUI NHỘN (FIXED) =================
 
 def send_text(user_id, text):
     try: requests.post(f"https://graph.facebook.com/v17.0/me/messages?access_token={ACCESS_TOKEN}", headers={"Content-Type": "application/json"}, data=json.dumps({"recipient": {"id": user_id}, "message": {"text": text}}))
@@ -243,24 +242,56 @@ def search_image_url(query):
             return res[0]['image'] if res else None
     except: return None
 
-# --- LOGIC CHATBOT HÀI HƯỚC (NEW) ---
+# --- CHATBOT VUI NHỘN (UPGRADE) ---
 def get_funny_response(text):
     text = text.lower()
-    if "yêu" in text: return "Yêu đương gì tầm này, lo học đi! 📚"
-    if "buồn" in text: return "Buồn thì đi ngủ, trong mơ cái gì cũng có. 😴"
-    if "chán" in text: return "Chán thì vào /kbb làm ván với tao này! 🥊"
-    if "ngu" in text: return "Gương kia ngự ở trên tường... 🪞"
-    if "alo" in text: return "Alo nghe rõ, dây thép gai đây! 📞"
-    if "hi" in text or "chào" in text: return "Chào cưng, nay rảnh ghé chơi à? 😎"
     
-    responses = [
+    # 1. Các câu hỏi về tình cảm, cảm xúc
+    if "yêu" in text or "crush" in text:
+        return random.choice([
+            "Yêu đương gì tầm này, lo học đi má! 📚",
+            "Crush nó không thích bạn đâu, tỉnh mộng đi. 🙄",
+            "Tình yêu như bát bún riêu, bao nhiêu sợi bún bấy nhiêu sợi sầu...",
+            "Vào /baitay xem quẻ tình duyên đi, ngồi đó mà than thở."
+        ])
+    if "buồn" in text or "khóc" in text or "sầu" in text:
+        return random.choice([
+            "Buồn thì đi ngủ, trong mơ cái gì cũng có. 😴",
+            "Thôi nín đi, khóc sưng mắt xấu lắm ai mà thèm yêu.",
+            "Cuộc đời này ngắn lắm, đừng lãng phí thời gian để buồn. Đi ăn gì ngon đi! 🍜",
+            "Có chuyện gì kể bot nghe, bot hứa sẽ... đi kể cho cả làng nghe (đùa đấy) 🤣"
+        ])
+    if "chán" in text:
+        return "Chán thì vào /kbb làm ván với tao này! 🥊"
+    
+    # 2. Các câu chửi bới, trêu chọc
+    if "ngu" in text or "dốt" in text or "điên" in text:
+        return random.choice([
+            "Gương kia ngự ở trên tường... 🪞",
+            "Chửi bot là nghiệp tụ vành môi đó nha. 🤐",
+            "Bot thông minh hơn bạn nghĩ đấy, cẩn thận!",
+            "Ok fine, bạn nhất, bạn là số 1. 👍"
+        ])
+    
+    # 3. Giao tiếp xã giao
+    if any(x in text for x in ["hi", "chào", "hello", "alo", "ê"]):
+        return random.choice([
+            "Chào cưng, nay rảnh ghé chơi à? 😎",
+            "Alo nghe rõ, dây thép gai đây! 📞",
+            "Hello, chúc một ngày không bị deadline dí! 🏃",
+            "Gõ /help để xem menu đi, chào hỏi hoài tốn pin."
+        ])
+    if "cảm ơn" in text or "thanks" in text:
+        return "Khách sáo quá, chuyển khoản là được rồi. 💸"
+
+    # 4. Fallback (Không hiểu)
+    return random.choice([
         "Nói gì không hiểu, nhưng mà nghe cuốn đấy! 🤣",
-        "Gõ /help để xem thực đơn, chứ chém gió tốn pin quá.",
-        "Đang bận xào bài, lát nói chuyện sau nhé.",
+        "Bot đang load... não hơi chậm thông cảm. 🐌",
         "Hỏi khó thế, đi hỏi Google đi má /gg",
-        "Bot đang chạy bằng cơm, đừng spam tội nghiệp 🍚"
-    ]
-    return random.choice(responses)
+        "Bot đang chạy bằng cơm, đừng spam tội nghiệp 🍚",
+        "Gõ /help xem lệnh đi, chém gió nãy giờ mệt chưa?"
+    ])
 
 # ================= 4. ENGINE TAROT (FULL 78 LÁ - STORYTELLING) =================
 
@@ -466,12 +497,12 @@ def handle_command(user_id, cmd, args):
         send_text(user_id, f"⏰ **GIỜ VN:** {now.strftime('%H:%M:%S')} - {now.strftime('%d/%m/%Y')}")
 
     elif cmd == "/thptqg":
-        # SỬA LỖI TIMEZONE & TÍNH NGÀY CHUẨN
+        # FIXED: Tính ngày chuẩn xác theo giờ VN
         tz = pytz.timezone('Asia/Ho_Chi_Minh')
         now = datetime.datetime.now(tz)
-        target = datetime.datetime(2026, 6, 25, tzinfo=tz) # Ngày thi dự kiến
+        target = datetime.datetime(2026, 6, 12, tzinfo=tz) # Ngày 12/06/2026
         days = (target - now).days
-        send_text(user_id, f"⏳ **ĐẾM NGƯỢC THPTQG 2026:**\n\n🎯 Mục tiêu: 25/06/2026\n📉 Còn lại: **{days} ngày**\n\nLo học đi, thời gian không chờ ai đâu! 📚")
+        send_text(user_id, f"⏳ **ĐẾM NGƯỢC THPTQG 2026:**\n\n🎯 Mục tiêu: 12/06/2026\n📉 Còn lại: **{days} ngày**\n\nLo học đi, thời gian không chờ ai đâu! 📚")
 
     elif cmd == "/hld":
         send_text(user_id, "🎉 **SỰ KIỆN:** Tết Nguyên Đán (29/01), Valentine (14/02).")
@@ -570,7 +601,7 @@ def handle_command(user_id, cmd, args):
         )
         send_text(user_id, menu)
     else:
-        # THAY VÌ BÁO LỖI, GỌI CHATBOT HÀI HƯỚC
+        # FIXED: CHATBOT HÀI HƯỚC KHI KHÔNG DÙNG LỆNH
         send_text(user_id, get_funny_response(cmd))
 
 # ================= 8. MAIN HANDLER =================
@@ -605,7 +636,7 @@ def webhook_handler():
                             del tarot_sessions[sender_id]
                             send_text(sender_id, "Đã hủy.")
                             continue
-                        handle_flow(sender_id, text, payload)
+                        handle_session_flow(sender_id, text, payload)
                         continue
 
                     if sender_id in kbb_state and payload:
@@ -621,7 +652,7 @@ def webhook_handler():
                     elif text:
                         if text.lower() in ["hi", "menu"]: handle_command(sender_id, "/help", [])
                         else:
-                            # LOGIC CHATBOT FALLBACK
+                            # FIXED: GỌI HÀM CHATBOT THAY VÌ BÁO LỖI
                             send_text(sender_id, get_funny_response(text))
 
         return "ok", 200
