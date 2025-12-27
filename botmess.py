@@ -23,12 +23,12 @@ except: pass
 
 # ================= 2. CƠ SỞ DỮ LIỆU & CẤU HÌNH =================
 
-# --- A. MAPPING SỐ -> LỆNH ---
+# --- A. MAPPING SỐ -> LỆNH (CẬP NHẬT 16 LỆNH) ---
 NUMBER_MAP = {
     "1": "/tarot", "2": "/baitay", "3": "/nhac", "4": "/time", "5": "/thptqg",
     "6": "/hld", "7": "/wiki", "8": "/gg", "9": "/kbb",
     "10": "/meme", "11": "/anime", "12": "/code",
-    "13": "/updt", "14": "/sticker"
+    "13": "/updt", "14": "/leak", "15": "/banner", "16": "/sticker"
 }
 
 # --- B. SESSION ---
@@ -85,7 +85,7 @@ SPREADS_TAROT = {
     "12": {"name": "Zodiac", "count": 12, "pos": [f"Tháng {i+1}" for i in range(12)]}
 }
 
-# --- E. DỮ LIỆU BÀI TÂY 52 LÁ (FULL ABSOLUTE) ---
+# --- E. DỮ LIỆU BÀI TÂY 52 LÁ ---
 PLAYING_CARDS_MEANING = {
     "Hearts": { # Cơ: Tình cảm
         "A": "Tình yêu mới, hạnh phúc, gia đình", "K": "Người đàn ông chân thành, tốt bụng", "Q": "Người phụ nữ dịu dàng, đáng tin", "J": "Tin tức tình yêu, người trẻ tuổi",
@@ -198,10 +198,9 @@ def execute_tarot_reading(user_context):
     else: msg += "✅ Vấn đề đời thường, có thể thay đổi bằng hành động cụ thể.\n"
     return msg
 
-# ================= 6. LOGIC BÀI TÂY ENGINE (FULL ABSOLUTE) =================
+# ================= 6. LOGIC BÀI TÂY ENGINE (CONTEXT-AWARE LOGIC) =================
 
 def generate_playing_deck():
-    """Tạo bộ bài 52 lá không Joker"""
     deck = []
     suits_map = {"Hearts": "♥ Cơ", "Diamonds": "♦ Rô", "Clubs": "♣ Tép", "Spades": "♠ Bích"}
     ranks_map = {"A": "Át", "2": "Hai", "3": "Ba", "4": "Bốn", "5": "Năm", "6": "Sáu", "7": "Bảy", "8": "Tám", "9": "Chín", "10": "Mười", "J": "Bồi", "Q": "Đầm", "K": "Già"}
@@ -209,10 +208,10 @@ def generate_playing_deck():
     for suit_en, ranks in PLAYING_CARDS_MEANING.items():
         for rank, meaning in ranks.items():
             full_name = f"{ranks_map[rank]} {suits_map[suit_en][2:]}"
-            display_name = f"{rank}{suits_map[suit_en][0]}" # VD: 10♦
+            display_name = f"{rank}{suits_map[suit_en][0]}" 
             deck.append({
-                "name": full_name, # Mười Rô
-                "display": display_name, # 10♦
+                "name": full_name, 
+                "display": display_name, 
                 "suit": suit_en,
                 "rank": rank,
                 "meaning": meaning
@@ -223,6 +222,7 @@ def execute_playing_reading(user_context):
     deck = generate_playing_deck()
     random.shuffle(deck)
     spread = SPREADS_PLAYING.get(user_context.get("spread_id", "5"), SPREADS_PLAYING["5"])
+    topic = user_context.get('topic', 'Tổng quan') # Lấy chủ đề
     
     drawn = []
     for i in range(spread["count"]):
@@ -231,53 +231,75 @@ def execute_playing_reading(user_context):
         drawn.append(card)
         drawn[i]["pos_name"] = spread["pos"][i]
         
-    # --- XÂY DỰNG NỘI DUNG TRẢ LỜI (STORYTELLING) ---
+    # LOGIC XÁC ĐỊNH DOMINANT SUIT
+    suits_count = {"Hearts": 0, "Diamonds": 0, "Clubs": 0, "Spades": 0}
+    for item in drawn: suits_count[item["suit"]] += 1
+    dom_suit = max(suits_count, key=suits_count.get)
+    
+    # --- XÂY DỰNG NỘI DUNG (THEO LOGIC CONTEXT) ---
     msg = f"🎭 **KẾT QUẢ BÓI BÀI TÂY**\n"
-    msg += f"👤 Người xem: {user_context.get('info', 'Ẩn danh')}\n"
-    msg += f"❓ Câu hỏi: {user_context.get('question')}\n"
+    msg += f"👤 Querent: {user_context.get('info', 'Ẩn danh')}\n"
+    msg += f"❤️ Vấn đề: **{topic}**\n"
     msg += f"🔀 Kiểu trải: {spread['name']}\n"
     msg += "➖➖➖➖➖➖➖➖➖➖\n\n"
     
-    # Danh sách bài
+    # 1. Hiển thị bài rút
     msg += "🃏 **CÁC LÁ BÀI ĐƯỢC BỐC:**\n"
     for item in drawn:
         msg += f"• {item['display']} – {item['name']}\n"
     
     msg += "\n🔍 **LUẬN GIẢI CHI TIẾT:**\n"
     
+    # 2. Luận giải chi tiết từng lá (Có xét đến Topic)
     for idx, item in enumerate(drawn):
-        # Xác định chất bài để dẫn dắt
-        suit_intro = ""
-        if item["suit"] == "Hearts": suit_intro = "Lá bài thuộc nước Cơ (Tình cảm/Gia đạo)."
-        elif item["suit"] == "Diamonds": suit_intro = "Lá bài thuộc nước Rô (Tiền bạc/Vật chất)."
-        elif item["suit"] == "Clubs": suit_intro = "Lá bài thuộc nước Tép (Công việc/Hành động)."
-        elif item["suit"] == "Spades": suit_intro = "Lá bài thuộc nước Bích (Thử thách/Lo âu)."
-        
         msg += f"🔹 **Lá {idx+1} – {item['display']} ({item['pos_name']})**\n"
-        msg += f"{suit_intro} Cụ thể, **{item['name']}** mang ý nghĩa về: *{item['meaning']}*.\n"
-        msg += f"Đặt vào vị trí '{item['pos_name']}', điều này cho thấy năng lượng này đang tác động trực tiếp, đòi hỏi bạn phải lưu tâm.\n\n"
         
-    msg += "✅ **TỔNG KẾT TOÀN CỤC:**\n"
-    # Logic tổng kết
-    suits_count = {"Hearts": 0, "Diamonds": 0, "Clubs": 0, "Spades": 0}
-    for item in drawn: suits_count[item["suit"]] += 1
-    dom_suit = max(suits_count, key=suits_count.get)
+        # Nếu lá bài KHÁC hệ với câu hỏi (VD: Hỏi Tình yêu ra Tiền) -> Giải nghĩa chéo
+        cross_meaning = ""
+        if "Tình" in topic and item["suit"] == "Diamonds":
+            cross_meaning = " (Yếu tố tài chính/thực tế đang tác động vào tình cảm)."
+        elif "Tình" in topic and item["suit"] == "Clubs":
+            cross_meaning = " (Công việc/bận rộn đang ảnh hưởng đến mối quan hệ)."
+        elif "Tiền" in topic and item["suit"] == "Hearts":
+            cross_meaning = " (Cảm xúc/gia đình đang chi phối quyết định tài chính)."
+            
+        msg += f"Ý nghĩa gốc: {item['meaning']}{cross_meaning}.\n"
+        msg += f"👉 Tại vị trí này, nó báo hiệu: "
+        
+        # Diễn giải theo vị trí (Giả lập AI kể chuyện)
+        if "Vấn đề" in item['pos_name'] or "Hiện tại" in item['pos_name']:
+            msg += "Đây là năng lượng đang bao trùm lấy bạn ngay lúc này.\n\n"
+        elif "Nguyên nhân" in item['pos_name'] or "Quá khứ" in item['pos_name']:
+            msg += "Nguồn gốc sâu xa dẫn đến tình trạng hiện nay.\n\n"
+        elif "Kết quả" in item['pos_name'] or "Tương lai" in item['pos_name']:
+            msg += "Xu hướng sẽ xảy ra nếu bạn giữ nguyên cách hành xử hiện tại.\n\n"
+        else:
+            msg += "Một yếu tố quan trọng cần lưu tâm.\n\n"
+
+    # 3. Tổng kết & Lời khuyên (LOGIC MA TRẬN CHỦ ĐỀ x CHẤT BÀI)
+    msg += "✅ **TỔNG KẾT & LỜI KHUYÊN:**\n"
     
-    if dom_suit == "Hearts": msg += "Phần lớn các lá bài thuộc nước Cơ. Vấn đề cốt lõi lúc này bị chi phối mạnh bởi **Cảm xúc và Mối quan hệ**. Hãy lắng nghe trái tim nhưng đừng để nó lấn át lý trí.\n"
-    elif dom_suit == "Diamonds": msg += "Phần lớn các lá bài thuộc nước Rô. Trọng tâm câu chuyện xoay quanh **Tài chính và Giá trị thực tế**. Đây là lúc cần tính toán kỹ lưỡng, thực dụng hơn.\n"
-    elif dom_suit == "Clubs": msg += "Phần lớn các lá bài thuộc nước Tép. Đây là giai đoạn của **Hành động và Công việc**. Đừng ngồi yên suy nghĩ, hãy bắt tay vào làm ngay.\n"
-    elif dom_suit == "Spades": msg += "Phần lớn các lá bài thuộc nước Bích. Cảnh báo về **Thử thách và Áp lực**. Bạn đang gặp khó khăn, nhưng đây cũng là lúc rèn luyện bản lĩnh.\n"
+    advice = ""
+    # Case 1: Hỏi Tình Cảm
+    if "Tình" in topic:
+        if dom_suit == "Hearts": advice = "Mọi thứ đang đi đúng hướng cảm xúc. Hãy lắng nghe trái tim và trân trọng sự kết nối này."
+        elif dom_suit == "Diamonds": advice = "Vấn đề tài chính hoặc sự thực dụng đang làm nguội lạnh tình cảm. Đừng để tiền bạc là rào cản."
+        elif dom_suit == "Clubs": advice = "Hai bạn có thể đang quá bận rộn với công việc hoặc thiếu thời gian cho nhau. Cần cân bằng lại."
+        elif dom_suit == "Spades": advice = "Có những rạn nứt, lo âu hoặc sự ngăn cản. Cần bình tĩnh, tránh xung đột lời nói lúc này."
     
-    msg += "\n💡 **LỜI KHUYÊN THỰC TẾ:**\n"
-    if suits_count["Spades"] >= 2:
-        msg += "Đừng vội vàng. Hiện tại có nhiều trở ngại, hãy ưu tiên sự an toàn và kiên nhẫn. "
-    elif suits_count["Diamonds"] >= 2:
-        msg += "Hãy quản lý tài chính chặt chẽ. Đừng đầu tư mạo hiểm lúc này. "
+    # Case 2: Hỏi Tiền Bạc / Công Việc
+    elif "Tiền" in topic or "Công" in topic:
+        if dom_suit == "Diamonds" or dom_suit == "Clubs": advice = "Tín hiệu rất tốt. Năng lượng của sự thịnh vượng và hành động đang ủng hộ bạn. Hãy quyết đoán."
+        elif dom_suit == "Hearts": advice = "Bạn đang quyết định dựa trên cảm tính quá nhiều. Trong công việc/tiền bạc, cần lý trí hơn."
+        elif dom_suit == "Spades": advice = "Cẩn thận rủi ro, tiểu nhân hoặc sự trì trệ. Không nên đầu tư mạo hiểm hay thay đổi việc lúc này."
+        
+    # Case 3: Tổng quan / Khác
     else:
-        msg += "Cơ hội đang mở ra. Hãy tận dụng nguồn lực hiện có và tiến bước một cách tự tin. "
-        
-    msg += "Thành công đến từ sự kỷ luật, không phải may mắn ngẫu nhiên."
-    
+        if dom_suit == "Spades": advice = "Giai đoạn này khá nhiều thử thách. Hãy án binh bất động, giữ gìn sức khỏe."
+        elif dom_suit == "Diamonds": advice = "Tài chính là điểm sáng. Hãy tập trung vào các mục tiêu vật chất."
+        else: advice = "Mọi thứ đang diễn ra khá thuận lợi. Hãy tin tưởng vào bản thân."
+
+    msg += f"{advice}\n\n👉 *Hãy nhớ: Bài chỉ cho thấy xu hướng, hành động của bạn mới quyết định kết quả.*"
     return msg
 
 # ================= 7. QUY TRÌNH HỘI THOẠI (SESSION MANAGER) =================
@@ -286,7 +308,7 @@ def handle_session_flow(user_id, text, payload):
     session = tarot_sessions.get(user_id)
     if not session: return
 
-    mode = session.get("mode", "TAROT") # TAROT hoặc PLAYING
+    mode = session.get("mode", "TAROT") 
     
     # ANTI-RESET
     if payload and "SPREAD_" in payload:
@@ -352,7 +374,7 @@ def handle_command(user_id, cmd, args):
         options = [("Tình cảm", "Tình cảm"), ("Tiền bạc", "Tiền bạc"), ("Công việc", "Công việc"), ("Vận hạn", "Vận hạn"), ("Tổng quan", "Tổng quan")]
         send_quick_reply(user_id, "🎭 **PHÒNG BÓI BÀI TÂY**\nBạn muốn xem về vấn đề gì?", options)
 
-    # CÁC LỆNH KHÁC (GIỮ NGUYÊN)
+    # CÁC LỆNH KHÁC
     elif cmd == "/nhac":
         q = " ".join(args) if args else ""
         link = f"https://www.youtube.com/results?search_query={q.replace(' ', '+')}" if q else "https://www.youtube.com/watch?v=k5mX3NkA7jM"
@@ -410,6 +432,25 @@ def handle_command(user_id, cmd, args):
             res = search_text_summary(f"{q} latest update patch notes summary")
             send_text(user_id, f"🆕 **UPDATE {q.upper()}:**\n\n{res}")
 
+    elif cmd == "/leak":
+        if not args: send_text(user_id, "🕵️ Nhập tên game. VD: `/leak hsr`")
+        else:
+            q = " ".join(args)
+            send_typing(user_id)
+            res = search_text_summary(f"{q} latest leaks rumors reddit")
+            send_text(user_id, f"🕵️ **LEAK {q.upper()}:**\n\n{res}")
+
+    elif cmd == "/banner":
+        if not args: send_text(user_id, "🏷️ Nhập tên game. VD: `/banner genshin`")
+        else:
+            q = " ".join(args)
+            send_typing(user_id)
+            now = datetime.datetime.now().strftime('%B %Y')
+            info = search_text_summary(f"current limited banner {q} {now}")
+            img = search_image_url(f"{q} current banner {now} official")
+            send_text(user_id, f"🏷️ **BANNER:**\n{info}")
+            if img: send_image(user_id, img)
+
     elif cmd == "/sticker":
         send_text(user_id, "🖼️ Gửi ảnh vào đây để tạo sticker.")
 
@@ -418,7 +459,7 @@ def handle_command(user_id, cmd, args):
             "✨➖ 🤖 **DANH SÁCH LỆNH BOT** 🤖➖✨\n"
             "                    Tronglv📸\n"
             "➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖\n"
-            "     🔮 **TÂM LINH** 🔮\n"
+            "     🔮 **TÂM LINH**\n"
             "✨ 1./tarot : Bói bài Tarot\n"
             "🎭 2./baitay : Bói bài Tây\n\n"
             "    🎵 **ÂM NHẠC**\n"
@@ -436,9 +477,11 @@ def handle_command(user_id, cmd, args):
             "🎬 11./anime : Gợi ý Anime\n\n"
             "    🎁 **GAME**\n"
             "🎟️ 12./code [game] : Giftcode game\n"
-            "🆕 13./updt [game] : Thông tin phiên bản\n\n"
+            "🆕 13./updt [game] : Thông tin update\n"
+            "🕵️ 14./leak [game] : Tổng hợp leak\n"
+            "🏷️ 15./banner [game] : Banner hiện tại\n\n"
             "    🖼️ **HÌNH ẢNH**\n"
-            "🖌️ 14./sticker : Gửi ảnh để tạo sticker\n\n"
+            "🖌️ 16./sticker : Gửi ảnh để tạo sticker\n\n"
             "*(💡 Mẹo: Nhắn số thứ tự để dùng lệnh nhanh)*"
         )
         send_text(user_id, menu)
@@ -492,7 +535,7 @@ def webhook_handler():
                         handle_command(sender_id, parts[0], parts[1:])
                     elif text:
                         if text.lower() in ["hi", "menu"]: handle_command(sender_id, "/help", [])
-                        else: send_text(sender_id, "Gõ /help hoặc số 1-14.")
+                        else: send_text(sender_id, "Gõ /help hoặc số 1-16.")
 
         return "ok", 200
     except: return "ok", 200
