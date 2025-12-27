@@ -6,6 +6,7 @@ import datetime
 import pytz
 import requests
 import wikipedia
+import time
 from flask import Flask, request
 from duckduckgo_search import DDGS
 
@@ -24,15 +25,15 @@ except: pass
 
 # --- A. MAPPING SỐ -> LỆNH ---
 NUMBER_MAP = {
-    "1": "/tarot", "2": "/nhac", "3": "/time", "4": "/thptqg",
-    "5": "/hld", "6": "/wiki", "7": "/gg", "8": "/kbb",
-    "9": "/meme", "10": "/anime", "11": "/code",
-    "12": "/updt", "13": "/leak", "14": "/banner", "15": "/sticker"
+    "1": "/tarot", "2": "/baitay", "3": "/nhac", "4": "/time", "5": "/thptqg",
+    "6": "/hld", "7": "/wiki", "8": "/gg", "9": "/kbb",
+    "10": "/meme", "11": "/anime", "12": "/code",
+    "13": "/updt", "14": "/sticker"
 }
 
 # --- B. SESSION ---
 kbb_state = {} 
-tarot_sessions = {} 
+tarot_sessions = {} # Dùng chung cho cả Tarot và Bài Tây
 
 # --- C. GAME CODES ---
 GAME_CODES = {
@@ -43,9 +44,7 @@ GAME_CODES = {
     "bloxfruit": ["SUB2GAMERROBOT", "KITGAMING"]
 }
 
-# --- D. DỮ LIỆU TAROT CHUYÊN SÂU (Theo yêu cầu mới) ---
-
-# 1. Ẩn Chính (Major Arcana)
+# --- D. DỮ LIỆU TAROT 78 LÁ ---
 MAJORS = {
     0: ("The Fool", "Khởi đầu, tự do, tiềm năng"),
     1: ("The Magician", "Ý chí, sáng tạo, hiện thực hóa"),
@@ -71,36 +70,49 @@ MAJORS = {
     21: ("The World", "Hoàn thành, viên mãn, trọn vẹn")
 }
 
-# 2. Ẩn Phụ (Minor Arcana) - Định nghĩa chi tiết từng lá
 MINOR_DATA = {
-    "Wands": { # Hành động, đam mê
-        "Ace": "Khởi đầu", "2": "Lựa chọn", "3": "Mở rộng", "4": "Ổn định", "5": "Cạnh tranh",
-        "6": "Thành công", "7": "Bảo vệ", "8": "Nhanh chóng", "9": "Kiên trì", "10": "Gánh nặng",
-        "Page": "Tò mò", "Knight": "Bốc đồng", "Queen": "Tự tin", "King": "Lãnh đạo"
+    "Wands": {"Ace": "Khởi đầu", "2": "Lựa chọn", "3": "Mở rộng", "4": "Ổn định", "5": "Cạnh tranh", "6": "Thành công", "7": "Bảo vệ", "8": "Nhanh chóng", "9": "Kiên trì", "10": "Gánh nặng", "Page": "Tò mò", "Knight": "Bốc đồng", "Queen": "Tự tin", "King": "Lãnh đạo"},
+    "Cups": {"Ace": "Tình cảm mới", "2": "Kết nối", "3": "Niềm vui", "4": "Chán nản", "5": "Mất mát", "6": "Ký ức", "7": "Ảo tưởng", "8": "Buông bỏ", "9": "Viên mãn", "10": "Hạnh phúc", "Page": "Nhạy cảm", "Knight": "Lãng mạn", "Queen": "Thấu cảm", "King": "Kiểm soát cảm xúc"},
+    "Swords": {"Ace": "Sự thật", "2": "Do dự", "3": "Đau lòng", "4": "Nghỉ ngơi", "5": "Thất bại", "6": "Rời đi", "7": "Gian dối", "8": "Tự trói buộc", "9": "Lo âu", "10": "Sụp đổ", "Page": "Quan sát", "Knight": "Hấp tấp", "Queen": "Thẳng thắn", "King": "Lý trí"},
+    "Pentacles": {"Ace": "Cơ hội", "2": "Cân bằng", "3": "Hợp tác", "4": "Giữ chặt", "5": "Thiếu thốn", "6": "Cho – nhận", "7": "Chờ đợi", "8": "Rèn luyện", "9": "Độc lập", "10": "Sung túc", "Page": "Học hỏi", "Knight": "Chăm chỉ", "Queen": "Thực tế", "King": "Thành công"}
+}
+
+SPREADS_TAROT = {
+    "1": {"name": "1 Lá (Nhanh)", "count": 1, "pos": ["Lời khuyên chính"]},
+    "3": {"name": "3 Lá (QK-HT-TL)", "count": 3, "pos": ["Quá khứ", "Hiện tại", "Tương lai"]},
+    "5": {"name": "5 Lá (Chi tiết)", "count": 5, "pos": ["Vấn đề", "Thách thức", "Gốc rễ", "Lời khuyên", "Kết quả"]},
+    "10": {"name": "Celtic Cross", "count": 10, "pos": ["HT", "Cản trở", "Tiềm thức", "QK", "Ý thức", "TL", "Bản thân", "Môi trường", "Hy vọng", "KQ"]},
+    "12": {"name": "Zodiac", "count": 12, "pos": [f"Tháng {i+1}" for i in range(12)]}
+}
+
+# --- E. DỮ LIỆU BÀI TÂY 52 LÁ (FULL ABSOLUTE) ---
+PLAYING_CARDS_MEANING = {
+    "Hearts": { # Cơ: Tình cảm
+        "A": "Tình yêu mới, hạnh phúc, gia đình", "K": "Người đàn ông chân thành, tốt bụng", "Q": "Người phụ nữ dịu dàng, đáng tin", "J": "Tin tức tình yêu, người trẻ tuổi",
+        "10": "Hạnh phúc viên mãn, cưới hỏi", "9": "Điều ước thành hiện thực", "8": "Hẹn hò, gặp gỡ, giao lưu", "7": "Ghen tuông, ảo tưởng tình cảm",
+        "6": "Người cũ quay lại, hoài niệm", "5": "Buồn bã, chia tay, thất vọng", "4": "Ổn định, cam kết lâu dài", "3": "Tình tay ba, sự xen ngang", "2": "Tình yêu đôi lứa, kết đôi"
     },
-    "Cups": { # Cảm xúc, tình yêu
-        "Ace": "Tình cảm mới", "2": "Kết nối", "3": "Niềm vui", "4": "Chán nản", "5": "Mất mát",
-        "6": "Ký ức", "7": "Ảo tưởng", "8": "Buông bỏ", "9": "Viên mãn", "10": "Hạnh phúc",
-        "Page": "Nhạy cảm", "Knight": "Lãng mạn", "Queen": "Thấu cảm", "King": "Kiểm soát cảm xúc"
+    "Diamonds": { # Rô: Tiền bạc
+        "A": "Cơ hội tài chính mới, giấy tờ quan trọng", "K": "Đàn ông thành đạt, có tiền", "Q": "Phụ nữ giỏi quản lý tiền, thực tế", "J": "Tin tức về tiền bạc, lợi nhuận",
+        "10": "Giàu có, thành công lớn, tiền về", "9": "Tự lập tài chính, thoải mái chi tiêu", "8": "Học tập, rèn luyện kỹ năng kiếm tiền", "7": "Rủi ro tài chính, cẩn thận đầu tư",
+        "6": "Sự giúp đỡ, vay mượn, từ thiện", "5": "Mất mát tiền bạc, khó khăn tạm thời", "4": "Tiết kiệm, giữ chặt tài sản, ổn định", "3": "Hợp tác làm ăn, đầu tư chung", "2": "Hợp đồng, thỏa thuận tài chính"
     },
-    "Swords": { # Tư duy, xung đột
-        "Ace": "Sự thật", "2": "Do dự", "3": "Đau lòng", "4": "Nghỉ ngơi", "5": "Thất bại",
-        "6": "Rời đi", "7": "Gian dối", "8": "Tự trói buộc", "9": "Lo âu", "10": "Sụp đổ",
-        "Page": "Quan sát", "Knight": "Hấp tấp", "Queen": "Thẳng thắn", "King": "Lý trí"
+    "Clubs": { # Tép: Công việc
+        "A": "Khởi đầu công việc mới, dự án mới", "K": "Quyền lực, sếp, người lãnh đạo", "Q": "Thông minh, khéo léo trong giao tiếp", "J": "Người trẻ học việc, nhân viên mới",
+        "10": "Thành công lớn trong sự nghiệp, thăng tiến", "9": "Tham vọng, áp lực công việc cao", "8": "Tin tức nhanh, di chuyển, công tác", "7": "Tranh chấp, mâu thuẫn đồng nghiệp",
+        "6": "Cơ hội phát triển, được ghi nhận", "5": "Thay đổi môi trường, thử thách mới", "4": "Nền tảng công việc ổn định, chắc chắn", "3": "Cân nhắc lựa chọn hướng đi", "2": "Hợp tác, hỗ trợ trong công việc"
     },
-    "Pentacles": { # Vật chất, tài chính
-        "Ace": "Cơ hội", "2": "Cân bằng", "3": "Hợp tác", "4": "Giữ chặt", "5": "Thiếu thốn",
-        "6": "Cho – nhận", "7": "Chờ đợi", "8": "Rèn luyện", "9": "Độc lập", "10": "Sung túc",
-        "Page": "Học hỏi", "Knight": "Chăm chỉ", "Queen": "Thực tế", "King": "Thành công"
+    "Spades": { # Bích: Thử thách
+        "A": "Kết thúc để khởi đầu lại, quyết định dứt khoát", "K": "Đàn ông nghiêm khắc, pháp luật", "Q": "Phụ nữ sắc sảo, cô độc hoặc góa phụ", "J": "Tin xấu, tiểu nhân, gián điệp",
+        "10": "Gánh nặng, xui xẻo, áp lực cực đại", "9": "Lo âu, mất ngủ, đau khổ tâm lý", "8": "Trở ngại bất ngờ, bị chặn đường", "7": "Phản bội, lừa dối, cẩn thận sau lưng",
+        "6": "Rời bỏ, đi xa, trốn tránh", "5": "Thất bại, mất mát, đổ vỡ", "4": "Trì hoãn, bệnh tật, mệt mỏi", "3": "Chia ly, đau lòng, rạn nứt", "2": "Mâu thuẫn, xung đột trực diện"
     }
 }
 
-SPREADS = {
-    "1": {"name": "1 Lá (Thông điệp nhanh)", "count": 1, "pos": ["Lời khuyên chính"]},
-    "3": {"name": "3 Lá (QK - HT - TL)", "count": 3, "pos": ["Quá khứ / Nguyên nhân", "Hiện tại / Tình huống", "Tương lai / Kết quả"]},
-    "5": {"name": "5 Lá (Giải quyết vấn đề)", "count": 5, "pos": ["Vấn đề hiện tại", "Thách thức", "Gốc rễ", "Lời khuyên", "Kết quả"]},
-    "10": {"name": "Celtic Cross", "count": 10, "pos": ["HT", "Cản trở", "Tiềm thức", "QK", "Ý thức", "TL", "Bản thân", "Môi trường", "Hy vọng", "KQ"]},
-    "12": {"name": "Zodiac", "count": 12, "pos": [f"Tháng {i+1}" for i in range(12)]}
+SPREADS_PLAYING = {
+    "3": {"name": "3 Lá (QK-HT-TL)", "count": 3, "pos": ["Quá khứ ảnh hưởng", "Hiện tại", "Xu hướng tương lai"]},
+    "5": {"name": "5 Lá (Tổng quan)", "count": 5, "pos": ["Vấn đề chính", "Nguyên nhân", "Yếu tố tiềm ẩn", "Lời khuyên", "Kết quả"]},
+    "7": {"name": "7 Lá (Tình duyên)", "count": 7, "pos": ["Bạn", "Đối phương", "Cảm xúc bạn", "Cảm xúc họ", "Trở ngại 1", "Trở ngại 2", "Kết quả"]}
 }
 
 # ================= 3. HÀM HỖ TRỢ GỬI TIN =================
@@ -141,16 +153,12 @@ def search_image_url(query):
             return results[0]['image'] if results else None
     except: return None
 
-# ================= 5. LOGIC TAROT ENGINE (NÂNG CẤP PRO) =================
+# ================= 5. LOGIC TAROT ENGINE =================
 
-def generate_full_deck():
-    """Tạo bộ bài 78 lá với ý nghĩa chuẩn xác"""
+def generate_tarot_deck():
     deck = []
-    # Major Arcana
     for i, (name, meaning) in MAJORS.items():
-        deck.append({"name": name, "type": "Major", "suit": "Major", "meaning": meaning})
-    
-    # Minor Arcana
+        deck.append({"name": f"{name} (Ẩn Chính)", "type": "Major", "suit": "Major", "meaning": meaning})
     for suit, ranks in MINOR_DATA.items():
         for rank, meaning in ranks.items():
             full_name = f"{rank} of {suit}"
@@ -158,143 +166,146 @@ def generate_full_deck():
     return deck
 
 def execute_tarot_reading(user_context):
-    """
-    GIAI ĐOẠN 3 & 4: Xào bài -> Giải bài
-    Logic: Phân tích năng lượng -> Diễn giải liền mạch -> Lời khuyên
-    """
-    deck = generate_full_deck()
-    random.shuffle(deck) # Xào bài
-    
-    spread_id = user_context.get("spread_id", "3")
-    spread = SPREADS.get(spread_id, SPREADS["3"])
-    count = spread["count"]
+    deck = generate_tarot_deck()
+    random.shuffle(deck)
+    spread = SPREADS_TAROT.get(user_context.get("spread_id", "3"), SPREADS_TAROT["3"])
     
     drawn = []
     stats = {"Major": 0, "Wands": 0, "Cups": 0, "Swords": 0, "Pentacles": 0}
     
-    # Bốc bài
-    for i in range(count):
+    for i in range(spread["count"]):
         if not deck: break
         card = deck.pop()
-        is_reversed = random.choice([False, False, False, True]) # 25% bài ngược
-        
-        # Thống kê năng lượng
+        is_rev = random.choice([False, False, False, True])
         if card["type"] == "Major": stats["Major"] += 1
         else: stats[card["suit"]] += 1
         
-        status_text = "Xuôi" if not is_reversed else "Ngược"
+        status_text = "Xuôi" if not is_rev else "Ngược"
         drawn.append({
             "pos": spread["pos"][i],
             "name": card["name"],
             "status": status_text,
             "meaning": card["meaning"],
-            "suit": card["suit"],
-            "is_reversed": is_reversed
+            "is_reversed": is_rev
         })
         
-    # --- XÂY DỰNG NỘI DUNG TRẢ LỜI ---
-    
-    # 1. Header & Danh sách bài
-    msg = f"🔮 **KẾT QUẢ BỐC {count} LÁ TAROT**\n"
-    msg += f"👤 Querent: {user_context.get('info', 'Ẩn danh')}\n"
-    msg += f"❤️ Vấn đề: {user_context.get('topic', 'Tổng quan')} - {user_context.get('question', '')}\n\n"
-    msg += "Bạn bốc được:\n"
+    msg = f"🔮 **KẾT QUẢ TAROT**\n👤 Querent: {user_context.get('info', 'Ẩn danh')}\n❤️ Vấn đề: {user_context.get('topic')}\n📜 Spread: {spread['name']}\n➖➖➖➖➖➖\n\n"
     for idx, item in enumerate(drawn):
-        icon = "1️⃣" if idx==0 else "2️⃣" if idx==1 else "3️⃣" if idx==2 else "4️⃣" if idx==3 else "5️⃣" if idx==4 else "🔹"
-        msg += f"{icon} {item['name']} – {item['status']}\n"
+        msg += f"📍 **{item['pos']}**: {item['name']} ({item['status']})\n👉 {item['meaning']}\n\n"
     
-    # 2. Phân tích tổng năng lượng
-    msg += "\n🔮 **PHÂN TÍCH TỔNG NĂNG LƯỢNG**\n"
-    energy_notes = []
-    if stats["Major"] >= count / 2:
-        energy_notes.append("Có nhiều lá Ẩn chính → vấn đề mang tính nội tâm, định hướng lâu dài hoặc bài học lớn.")
-    if stats["Cups"] >= 2: energy_notes.append("Xuất hiện nhiều Cảm xúc (Cups) → tâm trạng đang chi phối quyết định.")
-    if stats["Swords"] >= 2: energy_notes.append("Xuất hiện nhiều Lý trí (Swords) → đang có nhiều suy nghĩ, căng thẳng hoặc xung đột tư duy.")
-    if stats["Wands"] >= 2: energy_notes.append("Xuất hiện nhiều Hành động (Wands) → năng lượng muốn làm việc, di chuyển hoặc khao khát.")
-    if stats["Pentacles"] >= 2: energy_notes.append("Xuất hiện nhiều Vật chất (Pentacles) → quan tâm đến tiền bạc, sự ổn định thực tế.")
-    
-    if not energy_notes: energy_notes.append("Năng lượng khá cân bằng, không có yếu tố nào áp đảo quá mức.")
-    msg += "\n".join(energy_notes) + "\n"
-
-    # 3. Diễn giải liền mạch (Storytelling)
-    msg += "\n🔮 **DIỄN GIẢI LIỀN MẠCH**\n"
-    
-    # Logic nối văn bản cơ bản (Template based)
-    intro_card = drawn[0]
-    mid_cards = drawn[1:-1]
-    end_card = drawn[-1]
-    
-    # Mở bài
-    story = f"Bài cho thấy hiện tại, năng lượng xoay quanh vấn đề của bạn mang tính chất của **{intro_card['name']}**. "
-    if intro_card['is_reversed']:
-        story += f"Tuy nhiên, năng lượng này đang bị tắc nghẽn hoặc bạn chưa thực sự đối diện với nó ({intro_card['meaning']}). "
-    else:
-        story += f"Điều này thể hiện sự {intro_card['meaning']}. "
-    
-    # Thân bài
-    if mid_cards:
-        story += "Tiếp theo đó, "
-        for c in mid_cards:
-            rev_txt = "nhưng lại gặp chút trở ngại hoặc nội tâm chưa thông suốt" if c['is_reversed'] else "và điều này diễn ra khá tự nhiên"
-            story += f"sự xuất hiện của **{c['name']}** gợi ý về {c['meaning']}, {rev_txt}. "
-            
-    # Kết bài
-    story += f"Cuối cùng, lá **{end_card['name']}** ({end_card['status']}) khép lại trải bài với thông điệp về {end_card['meaning']}."
-    if end_card['is_reversed']:
-        story += " Lưu ý rằng kết quả này có thể bị trì hoãn nếu bạn không giải quyết các vấn đề gốc rễ."
-    
-    msg += story + "\n"
-
-    # 4. Lời khuyên
-    msg += "\n🔮 **LỜI KHUYÊN TỪ TAROT**\n"
-    msg += "Tarot không quyết định thay bạn, nhưng bài khuyên bạn:\n"
-    
-    advice_list = []
-    # Logic lời khuyên dựa trên lá cuối cùng hoặc bộ chiếm ưu thế
-    dominant_suit = max(stats, key=stats.get)
-    
-    if dominant_suit == "Major":
-        advice_list.append("✔️ Hãy nhìn nhận vấn đề này như một bài học lớn của cuộc đời.")
-        advice_list.append("✔️ Tin vào trực giác và dòng chảy của số phận.")
-    elif dominant_suit == "Swords":
-        advice_list.append("✔️ Hãy suy nghĩ thấu đáo nhưng đừng overthinking.")
-        advice_list.append("✔️ Cần sự rõ ràng, thẳng thắn trong giao tiếp.")
-    elif dominant_suit == "Cups":
-        advice_list.append("✔️ Lắng nghe cảm xúc của mình và người khác.")
-        advice_list.append("✔️ Đừng để nỗi sợ hay ảo tưởng che mờ lý trí.")
-    elif dominant_suit == "Wands":
-        advice_list.append("✔️ Đã đến lúc hành động, đừng chần chừ nữa.")
-        advice_list.append("✔️ Giữ vững ngọn lửa đam mê nhưng tránh bốc đồng.")
-    elif dominant_suit == "Pentacles":
-        advice_list.append("✔️ Tập trung vào thực tế, kế hoạch cụ thể.")
-        advice_list.append("✔️ Kiên nhẫn, thành quả cần thời gian vun trồng.")
-        
-    # Thêm lời khuyên từ lá kết quả
-    advice_list.append(f"✔️ Hướng tới năng lượng tích cực của {end_card['name']}: {end_card['meaning']}.")
-    
-    msg += "\n".join(advice_list)
-    msg += "\n\n👉 *Khi bạn thay đổi nhận thức, tương lai sẽ thay đổi theo.*"
-
+    msg += "💡 **LỜI KHUYÊN:**\n"
+    if stats["Major"] >= spread["count"]/2: msg += "⚠️ Giai đoạn ĐỊNH MỆNH quan trọng, hãy cân nhắc kỹ.\n"
+    else: msg += "✅ Vấn đề đời thường, có thể thay đổi bằng hành động cụ thể.\n"
     return msg
 
-# ================= 6. QUY TRÌNH HỘI THOẠI TAROT (4 GIAI ĐOẠN) =================
+# ================= 6. LOGIC BÀI TÂY ENGINE (FULL ABSOLUTE) =================
 
-def handle_tarot_flow(user_id, text, payload):
-    session = tarot_sessions.get(user_id, {"step": 0})
+def generate_playing_deck():
+    """Tạo bộ bài 52 lá không Joker"""
+    deck = []
+    suits_map = {"Hearts": "♥ Cơ", "Diamonds": "♦ Rô", "Clubs": "♣ Tép", "Spades": "♠ Bích"}
+    ranks_map = {"A": "Át", "2": "Hai", "3": "Ba", "4": "Bốn", "5": "Năm", "6": "Sáu", "7": "Bảy", "8": "Tám", "9": "Chín", "10": "Mười", "J": "Bồi", "Q": "Đầm", "K": "Già"}
     
-    # ANTI-RESET: Khôi phục nếu mất session
+    for suit_en, ranks in PLAYING_CARDS_MEANING.items():
+        for rank, meaning in ranks.items():
+            full_name = f"{ranks_map[rank]} {suits_map[suit_en][2:]}"
+            display_name = f"{rank}{suits_map[suit_en][0]}" # VD: 10♦
+            deck.append({
+                "name": full_name, # Mười Rô
+                "display": display_name, # 10♦
+                "suit": suit_en,
+                "rank": rank,
+                "meaning": meaning
+            })
+    return deck
+
+def execute_playing_reading(user_context):
+    deck = generate_playing_deck()
+    random.shuffle(deck)
+    spread = SPREADS_PLAYING.get(user_context.get("spread_id", "5"), SPREADS_PLAYING["5"])
+    
+    drawn = []
+    for i in range(spread["count"]):
+        if not deck: break
+        card = deck.pop()
+        drawn.append(card)
+        drawn[i]["pos_name"] = spread["pos"][i]
+        
+    # --- XÂY DỰNG NỘI DUNG TRẢ LỜI (STORYTELLING) ---
+    msg = f"🎭 **KẾT QUẢ BÓI BÀI TÂY**\n"
+    msg += f"👤 Người xem: {user_context.get('info', 'Ẩn danh')}\n"
+    msg += f"❓ Câu hỏi: {user_context.get('question')}\n"
+    msg += f"🔀 Kiểu trải: {spread['name']}\n"
+    msg += "➖➖➖➖➖➖➖➖➖➖\n\n"
+    
+    # Danh sách bài
+    msg += "🃏 **CÁC LÁ BÀI ĐƯỢC BỐC:**\n"
+    for item in drawn:
+        msg += f"• {item['display']} – {item['name']}\n"
+    
+    msg += "\n🔍 **LUẬN GIẢI CHI TIẾT:**\n"
+    
+    for idx, item in enumerate(drawn):
+        # Xác định chất bài để dẫn dắt
+        suit_intro = ""
+        if item["suit"] == "Hearts": suit_intro = "Lá bài thuộc nước Cơ (Tình cảm/Gia đạo)."
+        elif item["suit"] == "Diamonds": suit_intro = "Lá bài thuộc nước Rô (Tiền bạc/Vật chất)."
+        elif item["suit"] == "Clubs": suit_intro = "Lá bài thuộc nước Tép (Công việc/Hành động)."
+        elif item["suit"] == "Spades": suit_intro = "Lá bài thuộc nước Bích (Thử thách/Lo âu)."
+        
+        msg += f"🔹 **Lá {idx+1} – {item['display']} ({item['pos_name']})**\n"
+        msg += f"{suit_intro} Cụ thể, **{item['name']}** mang ý nghĩa về: *{item['meaning']}*.\n"
+        msg += f"Đặt vào vị trí '{item['pos_name']}', điều này cho thấy năng lượng này đang tác động trực tiếp, đòi hỏi bạn phải lưu tâm.\n\n"
+        
+    msg += "✅ **TỔNG KẾT TOÀN CỤC:**\n"
+    # Logic tổng kết
+    suits_count = {"Hearts": 0, "Diamonds": 0, "Clubs": 0, "Spades": 0}
+    for item in drawn: suits_count[item["suit"]] += 1
+    dom_suit = max(suits_count, key=suits_count.get)
+    
+    if dom_suit == "Hearts": msg += "Phần lớn các lá bài thuộc nước Cơ. Vấn đề cốt lõi lúc này bị chi phối mạnh bởi **Cảm xúc và Mối quan hệ**. Hãy lắng nghe trái tim nhưng đừng để nó lấn át lý trí.\n"
+    elif dom_suit == "Diamonds": msg += "Phần lớn các lá bài thuộc nước Rô. Trọng tâm câu chuyện xoay quanh **Tài chính và Giá trị thực tế**. Đây là lúc cần tính toán kỹ lưỡng, thực dụng hơn.\n"
+    elif dom_suit == "Clubs": msg += "Phần lớn các lá bài thuộc nước Tép. Đây là giai đoạn của **Hành động và Công việc**. Đừng ngồi yên suy nghĩ, hãy bắt tay vào làm ngay.\n"
+    elif dom_suit == "Spades": msg += "Phần lớn các lá bài thuộc nước Bích. Cảnh báo về **Thử thách và Áp lực**. Bạn đang gặp khó khăn, nhưng đây cũng là lúc rèn luyện bản lĩnh.\n"
+    
+    msg += "\n💡 **LỜI KHUYÊN THỰC TẾ:**\n"
+    if suits_count["Spades"] >= 2:
+        msg += "Đừng vội vàng. Hiện tại có nhiều trở ngại, hãy ưu tiên sự an toàn và kiên nhẫn. "
+    elif suits_count["Diamonds"] >= 2:
+        msg += "Hãy quản lý tài chính chặt chẽ. Đừng đầu tư mạo hiểm lúc này. "
+    else:
+        msg += "Cơ hội đang mở ra. Hãy tận dụng nguồn lực hiện có và tiến bước một cách tự tin. "
+        
+    msg += "Thành công đến từ sự kỷ luật, không phải may mắn ngẫu nhiên."
+    
+    return msg
+
+# ================= 7. QUY TRÌNH HỘI THOẠI (SESSION MANAGER) =================
+
+def handle_session_flow(user_id, text, payload):
+    session = tarot_sessions.get(user_id)
+    if not session: return
+
+    mode = session.get("mode", "TAROT") # TAROT hoặc PLAYING
+    
+    # ANTI-RESET
     if payload and "SPREAD_" in payload:
         spread_id = payload.replace("SPREAD_", "")
+        session["spread_id"] = spread_id
         send_typing(user_id)
-        # Giả lập context
-        fake_context = {"spread_id": spread_id, "topic": "Khôi phục", "question": "Câu hỏi trong tâm trí", "info": "Ẩn danh"}
-        send_text(user_id, f"🔀 Đang xào bài... Tập trung vào câu hỏi nhé...")
-        res = execute_tarot_reading(fake_context)
+        
+        if mode == "TAROT":
+            send_text(user_id, f"🔀 Đang xào bài Tarot... Tập trung nhé...")
+            res = execute_tarot_reading(session)
+        else:
+            send_text(user_id, f"🔀 Đang xào bài Tây... (Cắt bài 3 phần)...")
+            res = execute_playing_reading(session)
+            
         send_text(user_id, res)
         if user_id in tarot_sessions: del tarot_sessions[user_id]
         return
 
-    # GIAI ĐOẠN 1: THU THẬP THÔNG TIN
+    # STEP 1: Topic -> Hỏi câu hỏi
     if session["step"] == 1:
         session["topic"] = payload if payload else text
         session["step"] = 2
@@ -302,6 +313,7 @@ def handle_tarot_flow(user_id, text, payload):
         send_text(user_id, f"Bạn muốn hỏi cụ thể gì về '{session['topic']}'? (Gõ '.' để bỏ qua)")
         return
 
+    # STEP 2: Câu hỏi -> Hỏi thông tin
     if session["step"] == 2:
         session["question"] = text
         session["step"] = 3
@@ -309,53 +321,54 @@ def handle_tarot_flow(user_id, text, payload):
         send_quick_reply(user_id, "Cho mình biết Ngày sinh/Cung hoàng đạo nhé?", [("Bỏ qua", "SKIP")])
         return
 
-    # GIAI ĐOẠN 2: CHUẨN BỊ TRẢI BÀI
+    # STEP 3: Thông tin -> Chọn Spread
     if session["step"] == 3:
         session["info"] = text
         session["step"] = 4
         tarot_sessions[user_id] = session
-        options = [
-            ("1 Lá (Nhanh)", "SPREAD_1"),
-            ("3 Lá (Cơ bản)", "SPREAD_3"),
-            ("5 Lá (Chi tiết)", "SPREAD_5"),
-            ("Celtic (10 lá)", "SPREAD_10"),
-            ("Zodiac (12 lá)", "SPREAD_12")
-        ]
-        send_quick_reply(user_id, "🔹 Chọn cách trải bài phù hợp:", options)
+        
+        if mode == "TAROT":
+            options = [("1 Lá", "SPREAD_1"), ("3 Lá", "SPREAD_3"), ("5 Lá", "SPREAD_5"), ("Celtic", "SPREAD_10")]
+            send_quick_reply(user_id, "🔹 Chọn trải bài Tarot:", options)
+        else:
+            options = [("3 Lá (Thời gian)", "SPREAD_3"), ("5 Lá (Tổng quan)", "SPREAD_5"), ("7 Lá (Tình duyên)", "SPREAD_7")]
+            send_quick_reply(user_id, "🔹 Chọn trải bài Tây:", options)
         return
 
-# ================= 7. XỬ LÝ LỆNH CHUNG (GIỮ NGUYÊN 15 LỆNH) =================
+# ================= 8. XỬ LÝ LỆNH CHUNG =================
 
 def handle_command(user_id, cmd, args):
     cmd = cmd.lower()
     
     # 1. TAROT
     if cmd == "/tarot":
-        tarot_sessions[user_id] = {"step": 1}
+        tarot_sessions[user_id] = {"step": 1, "mode": "TAROT"}
         options = [("Tình yêu", "Tình yêu"), ("Công việc", "Công việc"), ("Tài chính", "Tài chính"), ("Nội tâm", "Nội tâm")]
         send_quick_reply(user_id, "🔮 **PHÒNG TAROT ONLINE**\nBạn muốn hỏi về chủ đề gì?", options)
 
-    # 2. NHẠC
+    # 2. BÀI TÂY (MỚI)
+    elif cmd == "/baitay":
+        tarot_sessions[user_id] = {"step": 1, "mode": "PLAYING"}
+        options = [("Tình cảm", "Tình cảm"), ("Tiền bạc", "Tiền bạc"), ("Công việc", "Công việc"), ("Vận hạn", "Vận hạn"), ("Tổng quan", "Tổng quan")]
+        send_quick_reply(user_id, "🎭 **PHÒNG BÓI BÀI TÂY**\nBạn muốn xem về vấn đề gì?", options)
+
+    # CÁC LỆNH KHÁC (GIỮ NGUYÊN)
     elif cmd == "/nhac":
         q = " ".join(args) if args else ""
         link = f"https://www.youtube.com/results?search_query={q.replace(' ', '+')}" if q else "https://www.youtube.com/watch?v=k5mX3NkA7jM"
         send_text(user_id, f"🎧 **TÌM NHẠC:** {link}")
 
-    # 3. TIME
     elif cmd == "/time":
         now = datetime.datetime.now(pytz.timezone('Asia/Ho_Chi_Minh'))
         send_text(user_id, f"⏰ **GIỜ VN:** {now.strftime('%H:%M:%S')} - {now.strftime('%d/%m/%Y')}")
 
-    # 4. THPTQG
     elif cmd == "/thptqg":
         days = (datetime.datetime(2026, 6, 25) - datetime.datetime.now()).days
         send_text(user_id, f"⏳ **THPTQG 2026:** Còn {days} ngày!")
 
-    # 5. NGÀY LỄ
     elif cmd == "/hld":
         send_text(user_id, "🎉 **SỰ KIỆN:** Tết Nguyên Đán (29/01), Valentine (14/02).")
 
-    # 6. WIKI
     elif cmd == "/wiki":
         if not args: send_text(user_id, "📖 Tra gì? VD: /wiki Hà Nội")
         else:
@@ -364,37 +377,31 @@ def handle_command(user_id, cmd, args):
                 send_text(user_id, f"📚 **WIKI:**\n{summary}")
             except: send_text(user_id, "❌ Không tìm thấy.")
 
-    # 7. GOOGLE
     elif cmd == "/gg":
         if not args: send_text(user_id, "🌐 Nhập câu hỏi. VD: /gg Giá vàng")
         else:
             res = search_text_summary(" ".join(args))
             send_text(user_id, f"🔎 **KẾT QUẢ:**\n\n{res}")
 
-    # 8. KÉO BÚA BAO
     elif cmd == "/kbb":
         kbb_state[user_id] = "WAITING"
         send_quick_reply(user_id, "✊ **KÉO BÚA BAO**", [("✌️", "KEO"), ("✊", "BUA"), ("✋", "BAO")])
 
-    # 9. MEME
     elif cmd == "/meme":
         try:
             r = requests.get("https://meme-api.com/gimme/animememes").json()
             send_image(user_id, r.get("url"))
         except: send_text(user_id, "❌ Lỗi ảnh.")
 
-    # 10. ANIME
     elif cmd == "/anime":
         animes = ["Naruto", "One Piece", "Attack on Titan", "Frieren", "Doraemon"]
         send_text(user_id, f"🎬 **GỢI Ý:** {random.choice(animes)}")
 
-    # 11. GIFTCODE
     elif cmd == "/code":
         g = args[0].lower() if args else ""
         codes = GAME_CODES.get(g, ["⚠️ Chưa có code."])
         send_text(user_id, f"🎟️ **CODE {g.upper()}:**\n" + "\n".join(codes))
 
-    # 12. UPDATE GAME
     elif cmd == "/updt":
         if not args: send_text(user_id, "🆕 Nhập tên game. VD: `/updt genshin 5.3`")
         else:
@@ -403,66 +410,42 @@ def handle_command(user_id, cmd, args):
             res = search_text_summary(f"{q} latest update patch notes summary")
             send_text(user_id, f"🆕 **UPDATE {q.upper()}:**\n\n{res}")
 
-    # 13. LEAK GAME
-    elif cmd == "/leak":
-        if not args: send_text(user_id, "🕵️ Nhập tên game. VD: `/leak hsr`")
-        else:
-            q = " ".join(args)
-            send_typing(user_id)
-            res = search_text_summary(f"{q} latest leaks rumors reddit")
-            send_text(user_id, f"🕵️ **LEAK {q.upper()}:**\n\n{res}")
-
-    # 14. BANNER
-    elif cmd == "/banner":
-        if not args: send_text(user_id, "🏷️ Nhập tên game. VD: `/banner genshin`")
-        else:
-            q = " ".join(args)
-            send_typing(user_id)
-            now = datetime.datetime.now().strftime('%B %Y')
-            info = search_text_summary(f"current limited banner {q} {now}")
-            img = search_image_url(f"{q} current banner {now} official")
-            send_text(user_id, f"🏷️ **BANNER:**\n{info}")
-            if img: send_image(user_id, img)
-
-    # 15. STICKER
     elif cmd == "/sticker":
         send_text(user_id, "🖼️ Gửi ảnh vào đây để tạo sticker.")
 
-    # MENU CHÍNH
     elif cmd in ["/help", "menu", "hi"]:
         menu = (
-            "✨➖ 🤖 DANH SÁCH LỆNH BOT 🤖➖✨\n"
+            "✨➖ 🤖 **DANH SÁCH LỆNH BOT** 🤖➖✨\n"
             "                    Tronglv📸\n"
             "➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖\n"
-            "    🔮 TAROT & TÂM LINH\n"
+            "     🔮 **TÂM LINH** 🔮\n"
             "✨ 1./tarot : Bói bài Tarot\n"
-            "    🎵 ÂM NHẠC\n"
-            "🎧 2./nhac [tên] : Tìm nhạc Youtube\n"
-            "    🕒 THỜI GIAN & SỰ KIỆN\n"
-            "⏰ 3./time : Xem giờ hiện tại\n"
-            "⏳ 4./thptqg : Đếm ngược ngày thi\n"
-            "🎉 5./hld : Ngày lễ sắp tới\n"
-            "    📚 TRA CỨU\n"
-            "📖 6./wiki [từ] : Tra Wikipedia\n"
-            "🌐 7./gg [câu hỏi] : Link Google\n"
-            "    🎮 GIẢI TRÍ\n"
-            "✊ 8./kbb : Chơi Kéo Búa Bao\n"
-            "🤣 9./meme : Xem ảnh chế\n"
-            "🎬 10./anime : Gợi ý Anime\n"
-            "    🎁 GAME\n"
-            "🎟️ 11./code [game] : Giftcode game\n"
-            "🆕 12./updt [game] : Thông tin update\n"
-            "🕵️ 13./leak [game] : Tổng hợp leak\n"
-            "🏷️ 14./banner [game] : Banner hiện tại\n"
-            "    🖼️ HÌNH ẢNH\n"
-            "🖌️ 15./sticker : Gửi ảnh để tạo sticker\n\n"
+            "🎭 2./baitay : Bói bài Tây\n\n"
+            "    🎵 **ÂM NHẠC**\n"
+            "🎧 3./nhac [tên] : Tìm nhạc Youtube\n\n"
+            "    🕒 **THỜI GIAN & SỰ KIỆN**\n"
+            "⏰ 4./time : Xem giờ hiện tại\n"
+            "⏳ 5./thptqg : Đếm ngược ngày thi\n"
+            "🎉 6./hld : Ngày lễ sắp tới\n\n"
+            "    📚 **TRA CỨU**\n"
+            "📖 7./wiki [từ] : Tra Wikipedia\n"
+            "🌐 8./gg [câu hỏi] : Link Google\n\n"
+            "    🎮 **GIẢI TRÍ**\n"
+            "✊ 9./kbb : Chơi Kéo Búa Bao\n"
+            "🤣 10./meme : Xem ảnh chế\n"
+            "🎬 11./anime : Gợi ý Anime\n\n"
+            "    🎁 **GAME**\n"
+            "🎟️ 12./code [game] : Giftcode game\n"
+            "🆕 13./updt [game] : Thông tin phiên bản\n\n"
+            "    🖼️ **HÌNH ẢNH**\n"
+            "🖌️ 14./sticker : Gửi ảnh để tạo sticker\n\n"
             "*(💡 Mẹo: Nhắn số thứ tự để dùng lệnh nhanh)*"
         )
         send_text(user_id, menu)
     else:
         send_text(user_id, "Lệnh không đúng. Gõ /help để xem Menu.")
 
-# ================= 8. MAIN HANDLER =================
+# ================= 9. MAIN HANDLER =================
 
 @app.route("/", methods=['GET'])
 def verify_webhook():
@@ -494,7 +477,7 @@ def webhook_handler():
                             del tarot_sessions[sender_id]
                             send_text(sender_id, "Đã hủy.")
                             continue
-                        handle_tarot_flow(sender_id, text, payload)
+                        handle_session_flow(sender_id, text, payload)
                         continue
 
                     if sender_id in kbb_state and payload:
@@ -509,7 +492,7 @@ def webhook_handler():
                         handle_command(sender_id, parts[0], parts[1:])
                     elif text:
                         if text.lower() in ["hi", "menu"]: handle_command(sender_id, "/help", [])
-                        else: send_text(sender_id, "Gõ /help hoặc số 1-15.")
+                        else: send_text(sender_id, "Gõ /help hoặc số 1-14.")
 
         return "ok", 200
     except: return "ok", 200
