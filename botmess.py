@@ -6,6 +6,7 @@ import datetime
 import pytz
 import requests
 import wikipedia
+import urllib.parse # Thêm thư viện xử lý URL ảnh
 from flask import Flask, request
 from duckduckgo_search import DDGS
 
@@ -22,11 +23,13 @@ except: pass
 
 # ================= 2. CẤU HÌNH HỆ THỐNG =================
 
+# CẬP NHẬT 18 LỆNH
 NUMBER_MAP = {
     "1": "/tarot", "2": "/baitay", "3": "/nhac", "4": "/time", "5": "/thptqg",
     "6": "/hld", "7": "/wiki", "8": "/gg", "9": "/kbb",
     "10": "/meme", "11": "/anime", "12": "/code",
-    "13": "/updt", "14": "/leak", "15": "/banner", "16": "/sticker"
+    "13": "/updt", "14": "/leak", "15": "/banner", "16": "/sticker",
+    "17": "/imagen", "18": "/nano"
 }
 
 kbb_state = {} 
@@ -40,7 +43,7 @@ GAME_CODES = {
     "bloxfruit": ["SUB2GAMERROBOT", "KITGAMING"]
 }
 
-# ================= 3. KHO TÀNG DỮ LIỆU TÂM LINH (GIỮ NGUYÊN V14) =================
+# ================= 3. KHO TÀNG DỮ LIỆU TÂM LINH (GIỮ NGUYÊN V15) =================
 
 MAJORS_DATA = {
     0: ("The Fool", "sự khởi đầu đầy ngây thơ, tự do và tiềm năng vô hạn", "sự liều lĩnh ngu ngốc, ngây thơ quá mức hoặc rủi ro không đáng có", "hãy dũng cảm bước đi nhưng đừng quên nhìn đường"),
@@ -209,7 +212,7 @@ SPREADS_PLAYING = {
     "7": {"name": "7 Lá (Tình duyên)", "count": 7, "pos": ["Năng lượng của bạn", "Năng lượng đối phương", "Cảm xúc của bạn", "Cảm xúc của họ", "Trở ngại khách quan", "Trở ngại chủ quan", "Kết quả mối quan hệ"]}
 }
 
-# ================= 3. HÀM HỖ TRỢ & CHATBOT VUI NHỘN (FIXED) =================
+# ================= 4. HÀM HỖ TRỢ & CHATBOT VUI NHỘN =================
 
 def send_text(user_id, text):
     try: requests.post(f"https://graph.facebook.com/v17.0/me/messages?access_token={ACCESS_TOKEN}", headers={"Content-Type": "application/json"}, data=json.dumps({"recipient": {"id": user_id}, "message": {"text": text}}))
@@ -242,11 +245,8 @@ def search_image_url(query):
             return res[0]['image'] if res else None
     except: return None
 
-# --- CHATBOT VUI NHỘN (UPGRADE) ---
 def get_funny_response(text):
     text = text.lower()
-    
-    # 1. Các câu hỏi về tình cảm, cảm xúc
     if "yêu" in text or "crush" in text:
         return random.choice([
             "Yêu đương gì tầm này, lo học đi má! 📚",
@@ -263,8 +263,6 @@ def get_funny_response(text):
         ])
     if "chán" in text:
         return "Chán thì vào /kbb làm ván với tao này! 🥊"
-    
-    # 2. Các câu chửi bới, trêu chọc
     if "ngu" in text or "dốt" in text or "điên" in text:
         return random.choice([
             "Gương kia ngự ở trên tường... 🪞",
@@ -272,8 +270,6 @@ def get_funny_response(text):
             "Bot thông minh hơn bạn nghĩ đấy, cẩn thận!",
             "Ok fine, bạn nhất, bạn là số 1. 👍"
         ])
-    
-    # 3. Giao tiếp xã giao
     if any(x in text for x in ["hi", "chào", "hello", "alo", "ê"]):
         return random.choice([
             "Chào cưng, nay rảnh ghé chơi à? 😎",
@@ -281,10 +277,6 @@ def get_funny_response(text):
             "Hello, chúc một ngày không bị deadline dí! 🏃",
             "Gõ /help để xem menu đi, chào hỏi hoài tốn pin."
         ])
-    if "cảm ơn" in text or "thanks" in text:
-        return "Khách sáo quá, chuyển khoản là được rồi. 💸"
-
-    # 4. Fallback (Không hiểu)
     return random.choice([
         "Nói gì không hiểu, nhưng mà nghe cuốn đấy! 🤣",
         "Bot đang load... não hơi chậm thông cảm. 🐌",
@@ -293,15 +285,12 @@ def get_funny_response(text):
         "Gõ /help xem lệnh đi, chém gió nãy giờ mệt chưa?"
     ])
 
-# ================= 4. ENGINE TAROT (FULL 78 LÁ - STORYTELLING) =================
+# ================= 5. ENGINE TAROT (FULL V15) =================
 
 def generate_tarot_deck():
     deck = []
-    # Major Arcana
     for i, (name, meaning_up, meaning_rev, advice) in MAJORS_DATA.items():
         deck.append({"name": f"{name} (Ẩn Chính)", "meaning_up": meaning_up, "meaning_rev": meaning_rev, "advice": advice, "type": "Major"})
-    
-    # Minor Arcana
     for suit, (desc, ranks) in MINORS_FULL.items():
         for r_name, (up, rev, adv) in ranks.items():
             deck.append({"name": f"{r_name} of {suit}", "meaning_up": up, "meaning_rev": rev, "advice": adv, "type": "Minor"})
@@ -312,8 +301,6 @@ def execute_tarot_reading(ctx):
     random.shuffle(deck)
     spread = SPREADS_TAROT.get(ctx.get("spread_id", "3"), SPREADS_TAROT["3"])
     drawn = []
-    
-    # Bốc bài
     for i in range(spread["count"]):
         if not deck: break
         c = deck.pop()
@@ -321,7 +308,6 @@ def execute_tarot_reading(ctx):
         c["orientation"] = random.choice(["Xuôi", "Ngược"])
         drawn.append(c)
 
-    # Viết văn (Văn phong chữa lành)
     msg = f"🔮 **KẾT QUẢ TAROT: {ctx.get('topic').upper()}**\n"
     msg += f"👤 Querent: {ctx.get('info', 'Ẩn danh')}\n➖➖➖➖➖➖\n\n"
     msg += "🍃 **HÀNH TRÌNH CỦA BẠN:**\n\n"
@@ -329,39 +315,28 @@ def execute_tarot_reading(ctx):
     for i, c in enumerate(drawn):
         prefix = ["Mở đầu,", "Tiếp theo,", "Sau đó,", "Gần kết thúc,"][min(i, 3)]
         status_icon = "🔺" if c['orientation'] == "Xuôi" else "🔻"
-        
         msg += f"{status_icon} **{c['pos']}: {c['name']}** ({c['orientation']})\n"
-        
         if c['orientation'] == "Xuôi":
             msg += f"{prefix} lá bài này mang đến năng lượng tích cực về {c['meaning_up']}. Đây là tín hiệu để bạn tự tin bước tiếp.\n"
         else:
             msg += f"{prefix} ở chiều ngược, lá bài cảnh báo về {c['meaning_rev']}. Có lẽ bạn cần chậm lại để xem xét kỹ hơn.\n"
-            
         msg += f"👉 *Lời khuyên nhỏ:* {c['advice']}\n\n"
             
     msg += "💡 **THÔNG ĐIỆP TỪ VŨ TRỤ:**\n"
     msg += "Mọi thứ diễn ra đều có lý do của nó. Hãy tin tưởng vào trực giác của bạn và dũng cảm đối diện với sự thật."
     return msg
 
-# ================= 5. ENGINE BÀI TÂY (CONTEXT-AWARE & STORYTELLING) =================
+# ================= 6. ENGINE BÀI TÂY (FULL V15) =================
 
 def generate_playing_deck():
     deck = []
     suits_vn = {"Hearts": "Cơ", "Diamonds": "Rô", "Clubs": "Tép", "Spades": "Bích"}
     ranks_vn = {"A":"Át", "2":"Hai", "3":"Ba", "4":"Bốn", "5":"Năm", "6":"Sáu", "7":"Bảy", "8":"Tám", "9":"Chín", "10":"Mười", "J":"Bồi", "Q":"Đầm", "K":"Già"}
-    
     for suit_en, ranks in PLAYING_CARDS_FULL.items():
         for rank, details in ranks.items():
             name = f"{ranks_vn[rank]} {suits_vn[suit_en]}"
             symbol = f"{rank}{'♥' if suit_en=='Hearts' else '♦' if suit_en=='Diamonds' else '♣' if suit_en=='Clubs' else '♠'}"
-            deck.append({
-                "name": name, 
-                "symbol": symbol, 
-                "suit": suit_en, 
-                "core": details["core"], 
-                "shadow": details["shadow"], 
-                "advice": details["advice"]
-            })
+            deck.append({"name": name, "symbol": symbol, "suit": suit_en, "core": details["core"], "shadow": details["shadow"], "advice": details["advice"]})
     return deck
 
 def get_natural_connector(index, total):
@@ -377,7 +352,6 @@ def execute_playing_reading(ctx):
     random.shuffle(deck)
     spread = SPREADS_PLAYING.get(ctx.get("spread_id", "5"), SPREADS_PLAYING["5"])
     topic = ctx.get("topic", "Tổng quan").lower()
-    
     drawn = []
     for i in range(spread["count"]):
         if not deck: break
@@ -385,53 +359,42 @@ def execute_playing_reading(ctx):
         c["pos_name"] = spread["pos"][i]
         drawn.append(c)
 
-    # --- MỞ BÀI ---
     msg = f"🎭 **BÓI BÀI TÂY: {ctx.get('topic').upper()}**\n"
     msg += f"👤 Người hỏi: {ctx.get('info', 'Ẩn danh')}\n"
     msg += "➖➖➖➖➖➖➖➖➖➖\n\n"
     msg += "🃏 **BỘ BÀI ĐÃ BỐC:** " + " - ".join([c['symbol'] for c in drawn]) + "\n\n"
     msg += "☕ **TRÒ CHUYỆN VÀ LUẬN GIẢI:**\n\n"
 
-    # --- THÂN BÀI (LOGIC KỂ CHUYỆN ĐA CHIỀU) ---
     for i, c in enumerate(drawn):
         connector = get_natural_connector(i, len(drawn))
-        
-        # Logic Context-Aware: Điều chỉnh ý nghĩa theo Topic
         interpretation = ""
-        
         if "tình" in topic:
             if c["suit"] == "Diamonds": interpretation = f"Dù hỏi về tình cảm, nhưng lá Rô này ám chỉ **vấn đề tài chính** đang tác động. {c['core']}."
             elif c["suit"] == "Clubs": interpretation = f"Công việc bận rộn đang làm xao nhãng mối quan hệ. {c['core']}."
             elif c["suit"] == "Spades": interpretation = f"Thật tiếc khi lá Bích xuất hiện, báo hiệu thử thách tâm lý. {c['core']}."
             else: interpretation = f"Tín hiệu tốt lành cho tình yêu. {c['core']}."
-            
         elif "tiền" in topic or "công" in topic:
             if c["suit"] == "Hearts": interpretation = f"Bạn đang để cảm xúc chi phối công việc. {c['core']}."
             elif c["suit"] == "Spades": interpretation = f"Cẩn thận rủi ro. {c['core']}."
             else: interpretation = f"Năng lượng rất tích cực. {c['core']}."
-            
-        else:
-            interpretation = f"{c['core']}."
+        else: interpretation = f"{c['core']}."
 
         msg += f"🔹 **{c['pos_name']}: {c['name']}**\n"
         msg += f"{connector} với lá bài này, về cơ bản nó nói về **{interpretation}**.\n"
         msg += f"👉 *Góc nhìn sâu hơn:* {c['shadow']}. "
         msg += f"Tại vị trí '{c['pos_name']}', lời khuyên là: {c['advice']}.\n\n"
 
-    # --- KẾT BÀI (TỔNG HỢP) ---
     suits_count = {"Hearts": 0, "Diamonds": 0, "Clubs": 0, "Spades": 0}
     for c in drawn: suits_count[c["suit"]] += 1
     dom_suit = max(suits_count, key=suits_count.get)
-    
     msg += "✅ **LỜI NHẮN NHỦ CUỐI CÙNG:**\n"
     if dom_suit == "Hearts": msg += "Cảm xúc đang dẫn lối bạn (nhiều Cơ). Hãy yêu thương nhưng đừng mù quáng."
     elif dom_suit == "Diamonds": msg += "Thực tế và vật chất đang lên ngôi (nhiều Rô). Hãy tính toán kỹ lưỡng."
     elif dom_suit == "Clubs": msg += "Hành động là chìa khóa (nhiều Tép). Đừng ngồi yên, hãy làm ngay đi."
     elif dom_suit == "Spades": msg += "Giai đoạn thử thách (nhiều Bích). Hãy kiên cường, sau cơn mưa trời lại sáng."
-        
     return msg
 
-# ================= 6. QUY TRÌNH HỘI THOẠI =================
+# ================= 7. QUY TRÌNH HỘI THOẠI =================
 
 def handle_flow(user_id, text, payload):
     s = tarot_sessions.get(user_id)
@@ -474,7 +437,7 @@ def handle_flow(user_id, text, payload):
             send_quick_reply(user_id, "🔹 Chọn trải bài Tây:", ops)
         return
 
-# ================= 7. XỬ LÝ LỆNH =================
+# ================= 8. XỬ LÝ LỆNH =================
 
 def handle_command(user_id, cmd, args):
     cmd = cmd.lower()
@@ -497,10 +460,9 @@ def handle_command(user_id, cmd, args):
         send_text(user_id, f"⏰ **GIỜ VN:** {now.strftime('%H:%M:%S')} - {now.strftime('%d/%m/%Y')}")
 
     elif cmd == "/thptqg":
-        # FIXED: Tính ngày chuẩn xác theo giờ VN
         tz = pytz.timezone('Asia/Ho_Chi_Minh')
         now = datetime.datetime.now(tz)
-        target = datetime.datetime(2026, 6, 12, tzinfo=tz) # Ngày 12/06/2026
+        target = datetime.datetime(2026, 6, 12, tzinfo=tz)
         days = (target - now).days
         send_text(user_id, f"⏳ **ĐẾM NGƯỢC THPTQG 2026:**\n\n🎯 Mục tiêu: 12/06/2026\n📉 Còn lại: **{days} ngày**\n\nLo học đi, thời gian không chờ ai đâu! 📚")
 
@@ -544,7 +506,6 @@ def handle_command(user_id, cmd, args):
         if not args: send_text(user_id, "🆕 Nhập tên game.")
         else:
             q = " ".join(args)
-            send_typing(user_id)
             res = search_text_summary(f"{q} latest update patch notes summary")
             send_text(user_id, f"🆕 **UPDATE {q.upper()}:**\n\n{res}")
 
@@ -552,7 +513,6 @@ def handle_command(user_id, cmd, args):
         if not args: send_text(user_id, "🕵️ Nhập tên game.")
         else:
             q = " ".join(args)
-            send_typing(user_id)
             res = search_text_summary(f"{q} latest leaks rumors")
             send_text(user_id, f"🕵️ **LEAK {q.upper()}:**\n\n{res}")
 
@@ -560,7 +520,6 @@ def handle_command(user_id, cmd, args):
         if not args: send_text(user_id, "🏷️ Nhập tên game.")
         else:
             q = " ".join(args)
-            send_typing(user_id)
             now = datetime.datetime.now().strftime('%B %Y')
             info = search_text_summary(f"current limited banner {q} {now}")
             img = search_image_url(f"{q} current banner {now} official")
@@ -569,6 +528,19 @@ def handle_command(user_id, cmd, args):
 
     elif cmd == "/sticker":
         send_text(user_id, "🖼️ Gửi ảnh vào đây để tạo sticker.")
+
+    # VẼ TRANH AI
+    elif cmd in ["/imagen", "/nano"]:
+        if not args:
+            send_text(user_id, f"🎨 Nhập mô tả. VD: {cmd} con mèo cute")
+        else:
+            prompt = " ".join(args)
+            send_text(user_id, "🎨 Đang vẽ tranh... đợi xíu nhé!")
+            encoded = urllib.parse.quote(prompt)
+            # /imagen = Flux (Đẹp), /nano = 3D/Anime (Nhanh)
+            model = "flux" if cmd == "/imagen" else "turbo" 
+            url = f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=1024&model={model}&nologo=true"
+            send_image(user_id, url)
 
     elif cmd in ["/help", "menu", "hi"]:
         menu = (
@@ -596,15 +568,17 @@ def handle_command(user_id, cmd, args):
             "🆕 13./updt [game] : Thông tin update\n"
             "🕵️ 14./leak [game] : Tổng hợp leak\n"
             "🏷️ 15./banner [game] : Banner hiện tại\n\n"
-            "    🖼️ **HÌNH ẢNH**\n"
-            "🖌️ 16./sticker : Gửi ảnh để tạo sticker"
+            "    🖼️ **HÌNH ẢNH & AI**\n"
+            "🖌️ 16./sticker : Gửi ảnh để tạo sticker\n"
+            "🎨 17./imagen [mô tả] : Vẽ tranh AI (Đẹp)\n"
+            "🚀 18./nano [mô tả] : Vẽ tranh AI (Nhanh)"
         )
         send_text(user_id, menu)
     else:
-        # FIXED: CHATBOT HÀI HƯỚC KHI KHÔNG DÙNG LỆNH
+        # CHATBOT HÀI HƯỚC
         send_text(user_id, get_funny_response(cmd))
 
-# ================= 8. MAIN HANDLER =================
+# ================= 9. MAIN HANDLER =================
 
 @app.route("/", methods=['GET'])
 def verify_webhook():
@@ -636,7 +610,7 @@ def webhook_handler():
                             del tarot_sessions[sender_id]
                             send_text(sender_id, "Đã hủy.")
                             continue
-                        handle_session_flow(sender_id, text, payload)
+                        handle_flow(sender_id, text, payload)
                         continue
 
                     if sender_id in kbb_state and payload:
@@ -652,7 +626,6 @@ def webhook_handler():
                     elif text:
                         if text.lower() in ["hi", "menu"]: handle_command(sender_id, "/help", [])
                         else:
-                            # FIXED: GỌI HÀM CHATBOT THAY VÌ BÁO LỖI
                             send_text(sender_id, get_funny_response(text))
 
         return "ok", 200
