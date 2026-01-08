@@ -302,28 +302,58 @@ def execute_tarot_reading(ctx):
     spread = SPREADS_TAROT.get(ctx.get("spread_id", "3"), SPREADS_TAROT["3"])
     drawn = []
     for i in range(spread["count"]):
-        if not deck: break
+        if not deck:
+            break
         c = deck.pop()
         c["pos"] = spread["pos"][i]
         c["orientation"] = random.choice(["Xuôi", "Ngược"])
         drawn.append(c)
 
-    msg = f"🔮 **KẾT QUẢ TAROT: {ctx.get('topic').upper()}**\n"
-    msg += f"👤 Querent: {ctx.get('info', 'Ẩn danh')}\n➖➖➖➖➖➖\n\n"
+    topic = ctx.get("topic", "Tổng quan")
+    question = ctx.get("question", "").strip()
+    info = ctx.get("info", "Ẩn danh")
+
+    msg = f"🔮 **KẾT QUẢ TAROT: {topic.upper()}**\n"
+    msg += f"👤 Querent: {info}\n"
+    if question and question != ".":
+        msg += f"❓ Câu hỏi: {question}\n"
+    msg += "➖➖➖➖➖➖\n\n"
     msg += "🍃 **HÀNH TRÌNH CỦA BẠN:**\n\n"
-    
+
+    openings = ["Mở màn bằng", "Khởi đầu với", "Bức tranh mở ra từ"]
+    transitions = ["Chuyển sang", "Tiếp nối bằng", "Kế đó là"]
+    closings = ["Khép lại bằng", "Đoạn kết gọi tên", "Điểm rơi nằm ở"]
+    random.shuffle(openings)
+    random.shuffle(transitions)
+    random.shuffle(closings)
+
     for i, c in enumerate(drawn):
-        prefix = ["Mở đầu,", "Tiếp theo,", "Sau đó,", "Gần kết thúc,"][min(i, 3)]
-        status_icon = "🔺" if c['orientation'] == "Xuôi" else "🔻"
-        msg += f"{status_icon} **{c['pos']}: {c['name']}** ({c['orientation']})\n"
-        if c['orientation'] == "Xuôi":
-            msg += f"{prefix} lá bài này mang đến năng lượng tích cực về {c['meaning_up']}. Đây là tín hiệu để bạn tự tin bước tiếp.\n"
+        if i == 0:
+            prefix = openings[i % len(openings)]
+        elif i == len(drawn) - 1:
+            prefix = closings[i % len(closings)]
         else:
-            msg += f"{prefix} ở chiều ngược, lá bài cảnh báo về {c['meaning_rev']}. Có lẽ bạn cần chậm lại để xem xét kỹ hơn.\n"
-        msg += f"👉 *Lời khuyên nhỏ:* {c['advice']}\n\n"
-            
+            prefix = transitions[i % len(transitions)]
+
+        status_icon = "🔺" if c["orientation"] == "Xuôi" else "🔻"
+        msg += f"{status_icon} **{c['pos']}: {c['name']}** ({c['orientation']})\n"
+        if c["orientation"] == "Xuôi":
+            msg += (
+                f"{prefix} {c['name']}, lá bài kể về {c['meaning_up']}. "
+                "Năng lượng tích cực đang mở đường cho bạn.\n"
+            )
+        else:
+            msg += (
+                f"{prefix} {c['name']} ở chiều ngược, gợi ra {c['meaning_rev']}. "
+                "Hãy chậm lại để nhìn rõ nguyên nhân.\n"
+            )
+        msg += f"👉 *Gợi ý thực tế:* {c['advice']}\n\n"
+
     msg += "💡 **THÔNG ĐIỆP TỪ VŨ TRỤ:**\n"
-    msg += "Mọi thứ diễn ra đều có lý do của nó. Hãy tin tưởng vào trực giác của bạn và dũng cảm đối diện với sự thật."
+    msg += (
+        "Trải bài nhắc rằng mọi bước ngoặt đều mang ý nghĩa. "
+        "Tin vào trực giác, giữ tâm bình và chọn hướng đi phù hợp với giá trị của bạn."
+    )
     return msg
 
 # ================= 6. ENGINE BÀI TÂY (FULL V15) =================
@@ -340,58 +370,77 @@ def generate_playing_deck():
     return deck
 
 def get_natural_connector(index, total):
-    starters = ["Đầu tiên thì,", "Mở bài là", "Khởi động với"]
-    middles = ["Tiếp đến,", "Bên cạnh đó,", "Không chỉ vậy,", "Chưa hết đâu,", "Nhìn sang lá tiếp theo,"]
-    enders = ["Cuối cùng,", "Chốt lại thì,", "Kết quả là,"]
-    if index == 0: return random.choice(starters)
-    elif index == total - 1: return random.choice(enders)
-    else: return random.choice(middles)
+    starters = ["Đầu tiên,", "Mở bài,", "Khởi động nhẹ," ]
+    middles = ["Tiếp nối,", "Bên cạnh đó,", "Ở nhịp kế,", "Chưa dừng lại,", "Nhìn sang lá khác,"]
+    enders = ["Cuối cùng,", "Kết lại,", "Đoạn chốt là,"]
+    if index == 0:
+        return random.choice(starters)
+    if index == total - 1:
+        return random.choice(enders)
+    return random.choice(middles)
 
 def execute_playing_reading(ctx):
     deck = generate_playing_deck()
     random.shuffle(deck)
     spread = SPREADS_PLAYING.get(ctx.get("spread_id", "5"), SPREADS_PLAYING["5"])
     topic = ctx.get("topic", "Tổng quan").lower()
+    question = ctx.get("question", "").strip()
+    info = ctx.get("info", "Ẩn danh")
     drawn = []
     for i in range(spread["count"]):
-        if not deck: break
+        if not deck:
+            break
         c = deck.pop()
         c["pos_name"] = spread["pos"][i]
         drawn.append(c)
 
     msg = f"🎭 **BÓI BÀI TÂY: {ctx.get('topic').upper()}**\n"
-    msg += f"👤 Người hỏi: {ctx.get('info', 'Ẩn danh')}\n"
+    msg += f"👤 Người hỏi: {info}\n"
+    if question and question != ".":
+        msg += f"❓ Câu hỏi: {question}\n"
     msg += "➖➖➖➖➖➖➖➖➖➖\n\n"
-    msg += "🃏 **BỘ BÀI ĐÃ BỐC:** " + " - ".join([c['symbol'] for c in drawn]) + "\n\n"
+    msg += "🃏 **BỘ BÀI ĐÃ BỐC:** " + " - ".join([c["symbol"] for c in drawn]) + "\n\n"
     msg += "☕ **TRÒ CHUYỆN VÀ LUẬN GIẢI:**\n\n"
 
     for i, c in enumerate(drawn):
         connector = get_natural_connector(i, len(drawn))
-        interpretation = ""
         if "tình" in topic:
-            if c["suit"] == "Diamonds": interpretation = f"Dù hỏi về tình cảm, nhưng lá Rô này ám chỉ **vấn đề tài chính** đang tác động. {c['core']}."
-            elif c["suit"] == "Clubs": interpretation = f"Công việc bận rộn đang làm xao nhãng mối quan hệ. {c['core']}."
-            elif c["suit"] == "Spades": interpretation = f"Thật tiếc khi lá Bích xuất hiện, báo hiệu thử thách tâm lý. {c['core']}."
-            else: interpretation = f"Tín hiệu tốt lành cho tình yêu. {c['core']}."
+            if c["suit"] == "Diamonds":
+                interpretation = f"Dù hỏi về tình cảm, lá Rô nhắc đến **yếu tố tài chính** đang xen vào. {c['core']}."
+            elif c["suit"] == "Clubs":
+                interpretation = f"Công việc đang chiếm nhiều năng lượng, dễ làm mối quan hệ hụt hơi. {c['core']}."
+            elif c["suit"] == "Spades":
+                interpretation = f"Lá Bích cho thấy thử thách tâm lý cần được giải tỏa. {c['core']}."
+            else:
+                interpretation = f"Tín hiệu tích cực cho cảm xúc đôi bên. {c['core']}."
         elif "tiền" in topic or "công" in topic:
-            if c["suit"] == "Hearts": interpretation = f"Bạn đang để cảm xúc chi phối công việc. {c['core']}."
-            elif c["suit"] == "Spades": interpretation = f"Cẩn thận rủi ro. {c['core']}."
-            else: interpretation = f"Năng lượng rất tích cực. {c['core']}."
-        else: interpretation = f"{c['core']}."
+            if c["suit"] == "Hearts":
+                interpretation = f"Cảm xúc đang ảnh hưởng đến quyết định thực tế. {c['core']}."
+            elif c["suit"] == "Spades":
+                interpretation = f"Cẩn trọng với rủi ro và áp lực. {c['core']}."
+            else:
+                interpretation = f"Dòng chảy thuận lợi, hãy tận dụng cơ hội. {c['core']}."
+        else:
+            interpretation = f"{c['core']}."
 
         msg += f"🔹 **{c['pos_name']}: {c['name']}**\n"
-        msg += f"{connector} với lá bài này, về cơ bản nó nói về **{interpretation}**.\n"
-        msg += f"👉 *Góc nhìn sâu hơn:* {c['shadow']}. "
-        msg += f"Tại vị trí '{c['pos_name']}', lời khuyên là: {c['advice']}.\n\n"
+        msg += f"{connector} {interpretation}\n"
+        msg += f"🌒 *Góc nhìn sâu hơn:* {c['shadow']}.\n"
+        msg += f"💡 *Lời nhắc tại vị trí '{c['pos_name']}':* {c['advice']}\n\n"
 
     suits_count = {"Hearts": 0, "Diamonds": 0, "Clubs": 0, "Spades": 0}
-    for c in drawn: suits_count[c["suit"]] += 1
+    for c in drawn:
+        suits_count[c["suit"]] += 1
     dom_suit = max(suits_count, key=suits_count.get)
     msg += "✅ **LỜI NHẮN NHỦ CUỐI CÙNG:**\n"
-    if dom_suit == "Hearts": msg += "Cảm xúc đang dẫn lối bạn (nhiều Cơ). Hãy yêu thương nhưng đừng mù quáng."
-    elif dom_suit == "Diamonds": msg += "Thực tế và vật chất đang lên ngôi (nhiều Rô). Hãy tính toán kỹ lưỡng."
-    elif dom_suit == "Clubs": msg += "Hành động là chìa khóa (nhiều Tép). Đừng ngồi yên, hãy làm ngay đi."
-    elif dom_suit == "Spades": msg += "Giai đoạn thử thách (nhiều Bích). Hãy kiên cường, sau cơn mưa trời lại sáng."
+    if dom_suit == "Hearts":
+        msg += "Cảm xúc đang dẫn lối bạn (nhiều Cơ). Hãy yêu thương nhưng giữ sự tỉnh táo."
+    elif dom_suit == "Diamonds":
+        msg += "Thực tế và vật chất lên tiếng (nhiều Rô). Hãy tính toán kỹ và đi từng bước."
+    elif dom_suit == "Clubs":
+        msg += "Hành động là chìa khóa (nhiều Tép). Đừng chần chừ, hãy bắt tay vào việc."
+    elif dom_suit == "Spades":
+        msg += "Giai đoạn thử thách (nhiều Bích). Kiên cường một chút, bình minh sẽ đến."
     return msg
 
 # ================= 7. QUY TRÌNH HỘI THOẠI =================
